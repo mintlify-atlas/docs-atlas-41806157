@@ -1,0 +1,109 @@
+---
+title: "Setting Up Keybinds for DankMaterialShell"
+description: "How to configure compositor keybinds to control DMS features such as spotlight, clipboard, notifications, and more using IPC commands."
+---
+
+DankMaterialShell does not manage keybinds itself — all keyboard shortcuts are configured in your compositor. Each shortcut executes a `dms ipc call` command that tells the shell what to do. This approach means your keybinds work with any compositor that supports running arbitrary commands, and you can wire up any IPC function to any key combination you choose.
+
+## IPC command pattern
+
+Every DMS feature is addressable through a consistent IPC command structure:
+
+```bash
+dms ipc call <target> <function> [parameters...]
+```
+
+When called from a compositor keybind, use the Quickshell IPC wrapper instead:
+
+```bash
+qs -c dms ipc call <target> <function> [parameters...]
+```
+
+The `qs -c dms` prefix tells Quickshell to route the IPC call through the running DMS instance. This is required when invoking DMS from compositor keybind `spawn` or `exec` directives.
+
+## Recommended keybinds
+
+The table below lists the most useful DMS features and their corresponding IPC commands:
+
+| Feature | IPC command |
+|---------|-------------|
+| Spotlight launcher | `qs -c dms ipc call spotlight toggle` |
+| Clipboard history | `qs -c dms ipc call clipboard toggle` |
+| Notification center | `qs -c dms ipc call notifications toggle` |
+| Power menu | `qs -c dms ipc call powermenu toggle` |
+| Notepad | `qs -c dms ipc call notepad toggle` |
+| Notepad (expand) | `qs -c dms ipc call notepad expand` |
+| Control center | `qs -c dms ipc call control-center toggle` |
+| Lock screen | `qs -c dms ipc call lock lock` |
+| Volume up | `qs -c dms ipc call audio increment 3` |
+| Volume down | `qs -c dms ipc call audio decrement 3` |
+| Brightness up | `qs -c dms ipc call brightness increment 5 ""` |
+| Brightness down | `qs -c dms ipc call brightness decrement 5 ""` |
+
+## Compositor keybind examples
+
+<Tabs>
+  <Tab title="Niri">
+    Add these entries to your Niri config file (`~/.config/niri/config.kdl`):
+
+    ```kdl
+    binds {
+        Mod+Space { spawn "qs" "-c" "dms" "ipc" "call" "spotlight" "toggle"; }
+        Mod+V { spawn "qs" "-c" "dms" "ipc" "call" "clipboard" "toggle"; }
+        Mod+P { spawn "qs" "-c" "dms" "ipc" "call" "notepad" "toggle"; }
+        Mod+Shift+P { spawn "qs" "-c" "dms" "ipc" "call" "notepad" "expand"; }
+        Mod+Ctrl+P { spawn "qs" "-c" "dms" "ipc" "call" "notepad" "toggleExpand"; }
+        Mod+X { spawn "qs" "-c" "dms" "ipc" "call" "powermenu" "toggle"; }
+        XF86AudioRaiseVolume { spawn "qs" "-c" "dms" "ipc" "call" "audio" "increment" "3"; }
+        XF86MonBrightnessUp { spawn "qs" "-c" "dms" "ipc" "call" "brightness" "increment" "5" ""; }
+    }
+    ```
+
+    Niri requires each argument to be passed as a separate quoted string in the `spawn` directive. Do not concatenate arguments into a single string.
+  </Tab>
+  <Tab title="Hyprland">
+    Add these entries to your Hyprland config file (`~/.config/hypr/hyprland.conf`):
+
+    ```conf
+    bind = SUPER, Space, exec, qs -c dms ipc call spotlight toggle
+    bind = SUPER, V, exec, qs -c dms ipc call clipboard toggle
+    bind = SUPER, P, exec, qs -c dms ipc call notepad toggle
+    bind = SUPER SHIFT, P, exec, qs -c dms ipc call notepad expand
+    bind = SUPER CTRL, P, exec, qs -c dms ipc call notepad toggleExpand
+    bind = SUPER, X, exec, qs -c dms ipc call powermenu toggle
+    bind = SUPER, slash, exec, qs -c dms ipc call hypr toggleBinds
+    bind = SUPER, Tab, exec, qs -c dms ipc call hypr toggleOverview
+    bind = , XF86AudioRaiseVolume, exec, qs -c dms ipc call audio increment 3
+    bind = , XF86MonBrightnessUp, exec, qs -c dms ipc call brightness increment 5 ""
+    ```
+
+    Hyprland also supports the Hyprland-specific `hypr` IPC target, which exposes a keybind cheatsheet (`toggleBinds`) and workspace overview (`toggleOverview`) that are only available when running Hyprland.
+  </Tab>
+  <Tab title="Other compositors">
+    Any compositor that can execute shell commands from a keybind can control DMS. Use the IPC command directly:
+
+    ```bash
+    qs -c dms ipc call spotlight toggle
+    ```
+
+    For compositors using the i3/sway config format (Sway, labwc, Scroll):
+
+    ```conf
+    bindsym $mod+Space exec qs -c dms ipc call spotlight toggle
+    bindsym $mod+V exec qs -c dms ipc call clipboard toggle
+    bindsym $mod+X exec qs -c dms ipc call powermenu toggle
+    ```
+  </Tab>
+</Tabs>
+
+## Settings keybind
+
+The settings panel can also be opened via IPC. The built-in **Ctrl+,** shortcut is registered by DMS directly, but you can add your own:
+
+```bash
+qs -c dms ipc call settings toggle
+```
+
+## Full IPC command reference
+
+The examples above cover the most common keybind targets. For a complete list of all available IPC targets and functions — including audio, brightness, wallpaper, media playback, night mode, and more — see the [IPC reference](/cli/ipc-reference).

@@ -1,0 +1,275 @@
+---
+title: "DankMaterialShell CLI Reference: dms Command"
+description: "All dms CLI subcommands: run, ipc, brightness, color pick, screenshot, clipboard, keybinds, config, plugins, matugen, doctor, and more with flags and examples."
+---
+
+The `dms` CLI is the command-line interface for DankMaterialShell. It starts and manages the shell daemon, sends IPC commands to control the running shell, and provides direct access to system utilities like the color picker, brightness controls, screenshots, and more — all without requiring a separate tool for each task.
+
+## Command overview
+
+| Command | Description |
+|---|---|
+| `dms run [-d]` | Start the shell, optionally as a background daemon |
+| `dms restart` | Restart the running shell process |
+| `dms kill` | Stop the running shell process |
+| `dms ipc <command>` | Send an IPC command to the shell |
+| `dms brightness [list\|set]` | Control display brightness |
+| `dms color pick [--rgb\|--hsv\|--json\|-a]` | Open the native color picker |
+| `dms clipboard [list\|clear]` | Manage clipboard history |
+| `dms screenshot [area\|output]` | Capture a screenshot |
+| `dms notify send <msg>` | Send a desktop notification |
+| `dms dpms [on\|off]` | Control display power management |
+| `dms keybinds [reload\|list]` | Manage keybindings |
+| `dms windowrules [add\|remove]` | Manage window rules |
+| `dms matugen [generate\|reload]` | Generate or reload Material You theme |
+| `dms dank16 [generate]` | Generate terminal color theme |
+| `dms config [get\|set]` | Read or write configuration values |
+| `dms features` | List available features on this system |
+| `dms doctor` | Run system diagnostics |
+| `dms plugins [browse\|install\|search]` | Manage plugins |
+| `dms update [check]` | Update DMS and its dependencies |
+| `dms greeter [install\|enable]` | Install or enable the greetd greeter |
+
+---
+
+## Shell management
+
+<AccordionGroup>
+  <Accordion title="dms run">
+    Start DankMaterialShell. Without flags, runs in the foreground.
+
+    ```bash
+    dms run       # Start in foreground
+    dms run -d    # Start as background daemon
+    ```
+
+    Use `-d` (daemon mode) when launching from a compositor autostart or session init script so the shell persists independently of the terminal session.
+  </Accordion>
+
+  <Accordion title="dms restart / dms kill">
+    Manage a running shell process.
+
+    ```bash
+    dms restart   # Gracefully restart the shell
+    dms kill      # Stop the shell process
+    ```
+
+    `dms restart` is useful after changing configuration files or updating plugins without logging out.
+  </Accordion>
+
+  <Accordion title="dms ipc">
+    Send an IPC command to the running shell. This is the primary way to control the shell from keybinds, scripts, and the terminal.
+
+    ```bash
+    dms ipc call <target> <function> [parameters...]
+    ```
+
+    Examples:
+
+    ```bash
+    dms ipc call spotlight toggle
+    dms ipc call audio setvolume 50
+    dms ipc call wallpaper set /path/to/image.jpg
+    ```
+
+    See the [IPC Command Reference](/cli/ipc-reference) for the full list of targets and functions.
+  </Accordion>
+</AccordionGroup>
+
+---
+
+## Display & brightness
+
+<AccordionGroup>
+  <Accordion title="dms brightness">
+    Control internal and external display brightness directly from the CLI.
+
+    ```bash
+    dms brightness list          # List available brightness devices
+    dms brightness set 80        # Set brightness to 80%
+    dms brightness set 50 intel_backlight   # Set brightness for a specific device
+    ```
+
+    For fine-grained increment/decrement control (e.g. from media keys), use the IPC interface instead:
+
+    ```bash
+    dms ipc call brightness increment 5 ""
+    dms ipc call brightness decrement 5 "intel_backlight"
+    ```
+  </Accordion>
+
+  <Accordion title="dms dpms">
+    Turn the display on or off via DPMS (Display Power Management Signaling).
+
+    ```bash
+    dms dpms on    # Turn display on
+    dms dpms off   # Turn display off
+    ```
+  </Accordion>
+
+  <Accordion title="dms screenshot">
+    Capture a screenshot.
+
+    ```bash
+    dms screenshot          # Full screen screenshot
+    dms screenshot area     # Interactive region selection
+    dms screenshot output   # Capture a specific output/monitor
+    ```
+  </Accordion>
+</AccordionGroup>
+
+---
+
+## Color picker
+
+The `dms color pick` command opens a native Wayland color picker with a magnifier. It supports HiDPI and fractional scaling and has no external dependencies.
+
+```bash
+dms color pick              # Pick color, output hex
+dms color pick --rgb        # Output as RGB (255 128 64)
+dms color pick --hsv        # Output as HSV (24 75% 100%)
+dms color pick --json       # Output all formats as JSON
+dms color pick -a           # Auto-copy to clipboard
+```
+
+The on-screen preview shows the value in whichever format is selected. JSON output includes hex, RGB, HSL, HSV, and CMYK.
+
+<Tip>
+  Use `dms color pick --json` in scripts that need multiple color formats from a single pick operation.
+</Tip>
+
+---
+
+## Media & system
+
+<AccordionGroup>
+  <Accordion title="dms clipboard">
+    Manage the clipboard history maintained by the shell.
+
+    ```bash
+    dms clipboard list    # List clipboard history entries
+    dms clipboard clear   # Clear all clipboard history
+    ```
+
+    To open the clipboard history UI, use the IPC interface:
+
+    ```bash
+    dms ipc call clipboard toggle
+    ```
+  </Accordion>
+
+  <Accordion title="dms notify send">
+    Send a desktop notification.
+
+    ```bash
+    dms notify send "Build complete"
+    ```
+
+    Useful at the end of long-running scripts to get an on-screen alert when a task finishes.
+  </Accordion>
+
+  <Accordion title="dms keybinds">
+    Manage compositor keybindings.
+
+    ```bash
+    dms keybinds list     # List configured keybinds
+    dms keybinds reload   # Reload keybinds from config
+    ```
+  </Accordion>
+
+  <Accordion title="dms windowrules">
+    Manage window rules applied by the shell.
+
+    ```bash
+    dms windowrules list           # List current window rules
+    dms windowrules add <rule>     # Add a new window rule
+    dms windowrules remove <rule>  # Remove a window rule
+    ```
+  </Accordion>
+</AccordionGroup>
+
+---
+
+## Configuration & plugins
+
+<AccordionGroup>
+  <Accordion title="dms config">
+    Read and write shell configuration values.
+
+    ```bash
+    dms config get <key>          # Get a configuration value
+    dms config set <key> <value>  # Set a configuration value
+    ```
+  </Accordion>
+
+  <Accordion title="dms matugen">
+    Generate or reload the Material You color theme derived from the current wallpaper.
+
+    ```bash
+    dms matugen generate   # Generate theme from current wallpaper
+    dms matugen reload     # Reload the active generated theme
+    ```
+  </Accordion>
+
+  <Accordion title="dms dank16">
+    Generate a terminal color scheme (dank16) from the current Material You palette.
+
+    ```bash
+    dms dank16 generate   # Generate terminal theme
+    ```
+  </Accordion>
+
+  <Accordion title="dms features">
+    Print the features available on the current system, based on installed dependencies and detected hardware.
+
+    ```bash
+    dms features
+    ```
+  </Accordion>
+
+  <Accordion title="dms doctor">
+    Run diagnostics that check for missing dependencies, misconfigured services, and common setup problems.
+
+    ```bash
+    dms doctor
+    ```
+  </Accordion>
+
+  <Accordion title="dms plugins">
+    Browse, search, and install plugins from the plugin registry.
+
+    ```bash
+    dms plugins browse            # Open the interactive plugin browser
+    dms plugins search <query>    # Search plugins by name or keyword
+    dms plugins install <name>    # Install a plugin
+    ```
+  </Accordion>
+
+  <Accordion title="dms update">
+    Update DMS and its dependencies.
+
+    ```bash
+    dms update          # Update to the latest version
+    dms update check    # Check if an update is available without installing
+    ```
+
+    <Note>
+      `dms update` and `dms greeter` are disabled in distribution packages (Arch, Fedora, Debian, etc.). Use your package manager to update instead.
+    </Note>
+  </Accordion>
+
+  <Accordion title="dms greeter">
+    Install and enable the greetd-based greeter for use as a login screen.
+
+    ```bash
+    dms greeter install   # Install the greeter
+    dms greeter enable    # Enable the greeter service
+    ```
+  </Accordion>
+</AccordionGroup>
+
+---
+
+## IPC command reference
+
+For the full list of IPC targets and functions available via `dms ipc call`, see the [IPC Command Reference](/cli/ipc-reference).

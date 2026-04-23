@@ -1,0 +1,86 @@
+---
+title: "DankMaterialShell Settings and Configuration File"
+description: "Open DankMaterialShell settings via the UI or settings.json. Covers key config options, config file location, and dms config CLI commands for scripted changes."
+---
+
+DankMaterialShell stores all user preferences in `~/.config/DankMaterialShell/settings.json`. You can edit settings through the graphical Settings UI inside the shell, or by editing that file directly with any text editor. Changes made through the UI are written back to disk immediately.
+
+## Opening the settings UI
+
+<Tip>
+  Press **Ctrl+,** at any time to open the Settings panel without leaving your current workspace.
+</Tip>
+
+You can also open settings from the command line using an IPC call:
+
+```bash
+dms ipc call settings open
+```
+
+Or toggle it from a keybind in your compositor config — see [Setting Up Keybinds](/configuration/keybinds) for examples.
+
+## Settings tabs
+
+The Settings panel is divided into tabs covering different areas of configuration:
+
+<AccordionGroup>
+  <Accordion title="Appearance">
+    Controls the active color theme, dark/light mode, wallpaper, and bar layout. This is where you select a built-in theme or point DMS at a custom theme file.
+  </Accordion>
+  <Accordion title="Behavior">
+    Configure idle timeouts, screen lock delay, auto-hide rules for the bar and dock, and compositor-specific options.
+  </Accordion>
+  <Accordion title="Plugins">
+    Discover, enable, and configure plugins installed in `~/.config/DankMaterialShell/plugins/`. Use **Scan for Plugins** to detect newly added plugin directories.
+  </Accordion>
+</AccordionGroup>
+
+## Config file location
+
+```
+~/.config/DankMaterialShell/settings.json
+```
+
+The file is plain JSON. You can edit it while the shell is running; most settings take effect on the next relevant event (e.g., theme changes apply immediately, idle timeouts apply on the next idle cycle).
+
+## Key settings
+
+| Key | Type | Description |
+|-----|------|-------------|
+| `currentThemeName` | string | Name of the active theme (e.g., `"cyberpunk-electric"`, `"custom"`) |
+| `customThemeFile` | string | Absolute path to a custom theme JSON file (used when `currentThemeName` is `"custom"`) |
+| `wallpaper` | string | Absolute path to the wallpaper image |
+| `barLayout` | string | Layout of the top bar widgets |
+| `idleTimeout` | number | Seconds of inactivity before triggering idle actions |
+| `lockTimeout` | number | Seconds after idle before locking the screen |
+
+## Example settings.json
+
+The snippet below shows a minimal configuration that selects a custom theme:
+
+```json
+{
+  "currentThemeName": "custom",
+  "customThemeFile": "/home/user/.config/DankMaterialShell/themes/mytheme.json",
+  "wallpaper": "/home/user/Pictures/wallpaper.jpg",
+  "idleTimeout": 300,
+  "lockTimeout": 600
+}
+```
+
+See [Creating Custom Color Themes](/configuration/custom-themes) for details on how to build the theme file referenced by `customThemeFile`.
+
+## CLI commands for scripting
+
+The `dms config` subcommand lets you read and write individual settings from scripts or terminal workflows without editing JSON by hand:
+
+```bash
+# Read a setting
+dms config get currentThemeName
+
+# Write a setting
+dms config set currentThemeName "custom"
+dms config set customThemeFile "/home/user/.config/DankMaterialShell/themes/mytheme.json"
+```
+
+This is useful for integrating DMS settings changes into shell scripts or system automation.

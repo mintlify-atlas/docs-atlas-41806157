@@ -1,0 +1,181 @@
+---
+title: "Extending DankMaterialShell with the Plugin System"
+description: "How DMS plugins work: four plugin types, plugin.json manifest format, PluginService API for data persistence, permission system, and the community registry."
+---
+
+Plugins let you extend DankMaterialShell with custom widgets, background daemons, spotlight launcher entries, and desktop widgets. They are discovered automatically from a local directory, managed through the Settings UI, and can be shared with the community via the official plugin registry.
+
+## Plugin types
+
+DMS supports four plugin types, each serving a distinct role in the shell:
+
+<CardGroup cols={2}>
+  <Card title="Widget plugins" icon="layout-panel-top" href="/plugins/widget-plugins">
+    Render UI components inside DankBar or Control Center. Supports horizontal and vertical bar orientations, popouts, and CC toggle tiles.
+  </Card>
+  <Card title="Launcher plugins" icon="search" href="/plugins/launcher-plugins">
+    Add custom searchable items to the DMS spotlight launcher with trigger-based filtering and configurable actions.
+  </Card>
+  <Card title="Desktop plugins" icon="monitor" href="/plugins/desktop-plugins">
+    Place freely-positioned widgets on the desktop background layer with drag, resize, and automatic position persistence.
+  </Card>
+  <Card title="Daemon plugins" icon="cpu" href="/plugins/overview">
+    Run invisibly in the background without any UI. Useful for monitoring system events, background tasks, or data synchronization.
+  </Card>
+</CardGroup>
+
+## Plugin discovery
+
+DMS scans for plugins in:
+
+```bash
+~/.config/DankMaterialShell/plugins/
+```
+
+Each plugin must be a subdirectory containing a `plugin.json` manifest. To trigger a rescan after adding a new plugin, open **Settings → Plugins** and click **Scan for Plugins**.
+
+## Plugin directory structure
+
+```
+~/.config/DankMaterialShell/plugins/YourPlugin/
+├── plugin.json
+├── YourWidget.qml
+└── YourSettings.qml
+```
+
+Optional JavaScript utility files (`*.js`) can also be placed inside the plugin directory.
+
+## Plugin manifest (plugin.json)
+
+Every plugin requires a `plugin.json` manifest in its directory. Below is a minimal example:
+
+```json
+{
+    "id": "yourPlugin",
+    "name": "Your Plugin Name",
+    "description": "Brief description of what your plugin does",
+    "version": "1.0.0",
+    "author": "Your Name",
+    "type": "widget",
+    "capabilities": ["dankbar-widget"],
+    "component": "./YourWidget.qml",
+    "icon": "extension",
+    "settings": "./YourSettings.qml",
+    "requires_dms": ">=0.1.0",
+    "requires": ["curl"],
+    "permissions": [
+        "settings_read",
+        "settings_write"
+    ]
+}
+```
+
+### Required fields
+
+| Field          | Description                                                              |
+| -------------- | ------------------------------------------------------------------------ |
+| `id`           | Unique camelCase identifier, no spaces (e.g. `myPlugin`)                 |
+| `name`         | Human-readable display name                                              |
+| `description`  | Short description shown in the Plugins UI                                |
+| `version`      | Semantic version string (e.g. `1.0.0`)                                   |
+| `author`       | Creator name or email                                                    |
+| `type`         | One of: `widget`, `daemon`, `launcher`, `desktop`                        |
+| `capabilities` | Array of capability strings (e.g. `["dankbar-widget"]`)                  |
+| `component`    | Relative path to main QML file (e.g. `./YourWidget.qml`)                 |
+
+Launcher plugins also require a `trigger` field (see [Launcher plugins](/plugins/launcher-plugins)).
+
+### Optional fields
+
+| Field          | Description                                                              |
+| -------------- | ------------------------------------------------------------------------ |
+| `icon`         | Material Design icon name displayed in the Plugins UI                    |
+| `settings`     | Path to settings QML component (enables the settings accordion)          |
+| `requires_dms` | Minimum DMS version (e.g. `>=0.1.18`)                                    |
+| `requires`     | Array of required system tools (e.g. `["curl", "jq"]`)                   |
+| `permissions`  | Array of DMS permission strings                                           |
+
+## Permission system
+
+Plugins declare permissions in `plugin.json` under the `permissions` array.
+
+| Permission       | Enforced | Description                                              |
+| ---------------- | -------- | -------------------------------------------------------- |
+| `settings_read`  | No       | Declares intent to read plugin settings                  |
+| `settings_write` | **Yes**  | Required to use `PluginSettings` and save settings data  |
+| `process`        | No       | Declares intent to execute system commands               |
+| `network`        | No       | Declares intent to make network requests                 |
+
+<Warning>
+If your plugin includes a settings component but does not declare `settings_write`, users will see an error message in place of the settings UI.
+</Warning>
+
+## Plugin management
+
+Open **Settings → Plugins** to:
+
+- View all discovered plugins
+- Enable or disable individual plugins with a toggle switch
+- Access per-plugin settings (inline accordion interface)
+- Click **Scan for Plugins** to detect newly added plugin directories
+
+## PluginService API
+
+The `PluginService` singleton manages plugin lifecycle and exposes a data persistence API.
+
+### Key functions
+
+```qml
+// Plugin lifecycle
+PluginService.loadPlugin(pluginId: string): bool
+PluginService.unloadPlugin(pluginId: string): bool
+PluginService.enablePlugin(pluginId: string): bool
+PluginService.disablePlugin(pluginId: string): bool
+
+// Discovery
+PluginService.scanPlugins(): void
+PluginService.isPluginLoaded(pluginId: string): bool
+
+// Data persistence (survives shell restarts)
+PluginService.savePluginData(pluginId: string, key: string, value: any): bool
+PluginService.loadPluginData(pluginId: string, key: string, defaultValue: any): any
+
+// Global variables (runtime only, synchronized across instances)
+PluginService.setGlobalVar(pluginId: string, varName: string, value: any): void
+PluginService.getGlobalVar(pluginId: string, varName: string, defaultValue: any): any
+```
+
+### Signals
+
+```qml
+PluginService.pluginLoaded(pluginId: string)
+PluginService.pluginUnloaded(pluginId: string)
+PluginService.pluginLoadFailed(pluginId: string, error: string)
+PluginService.globalVarChanged(pluginId: string, varName: string)
+```
+
+<Note>
+The plugin API is currently **experimental**. Breaking changes may occur in minor version updates. Pin your plugin to a specific DMS version range using `requires_dms` for production use.
+</Note>
+
+## CLI plugin management
+
+The `dms` CLI provides commands for browsing and installing community plugins:
+
+```bash
+dms plugins browse     # Open the plugin registry in your browser
+dms plugins install    # Install a plugin by ID or URL
+dms plugins search     # Search available plugins by name or keyword
+```
+
+## Plugin registry
+
+Browse and discover community plugins at **[https://plugins.danklinux.com](https://plugins.danklinux.com)**.
+
+## Security
+
+<Warning>
+Plugins run with full QML runtime access — they can execute commands, read files, and make network requests. Only install plugins from sources you trust.
+</Warning>
+
+Sandboxed plugin execution and an enhanced permission system are on the roadmap for a future DMS release.

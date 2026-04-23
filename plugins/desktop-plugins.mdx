@@ -1,0 +1,219 @@
+---
+title: "Building Desktop Widget Plugins for DankMaterialShell"
+description: "How to create desktop widget plugins that appear on the desktop layer with drag, resize, and automatic position persistence support."
+---
+
+Desktop plugins are widgets that live on the desktop background layer, behind all application windows. Users can drag them to any position and resize them using a corner handle. Their position and size are persisted automatically across shell restarts — no manual file handling required in your plugin code.
+
+## Plugin type configuration
+
+Set `"type": "desktop"` and include `"desktop-widget"` in `capabilities` in your `plugin.json`:
+
+```json
+{
+    "id": "myDesktopWidget",
+    "name": "My Desktop Widget",
+    "description": "A custom desktop widget",
+    "version": "1.0.0",
+    "author": "Your Name",
+    "type": "desktop",
+    "capabilities": ["desktop-widget"],
+    "component": "./MyWidget.qml",
+    "icon": "widgets",
+    "settings": "./MySettings.qml",
+    "permissions": ["settings_read", "settings_write"]
+}
+```
+
+## Creating a desktop plugin
+
+<Steps>
+  <Step title="Create plugin directory">
+    ```bash
+    mkdir -p ~/.config/DankMaterialShell/plugins/MyDesktopWidget
+    cd ~/.config/DankMaterialShell/plugins/MyDesktopWidget
+    ```
+  </Step>
+
+  <Step title="Create plugin.json">
+    Use the manifest example above, replacing field values with your own plugin details.
+  </Step>
+
+  <Step title="Implement the desktop widget component">
+    Create `MyWidget.qml`. The shell injects several properties into your component automatically — declare them so they can receive values.
+
+    ```qml
+    import QtQuick
+    import qs.Common
+
+    Item {
+        id: root
+
+        // Injected properties (provided by DesktopPluginWrapper)
+        property var pluginService: null
+        property string pluginId: ""
+        property bool editMode: false
+        property real widgetWidth: 200
+        property real widgetHeight: 200
+
+        // Optional: define minimum size constraints
+        property real minWidth: 100
+        property real minHeight: 100
+
+        Rectangle {
+            anchors.fill: parent
+            radius: Theme.cornerRadius
+            color: Theme.surfaceContainer
+            opacity: 0.85
+            border.color: root.editMode ? Theme.primary : "transparent"
+            border.width: root.editMode ? 2 : 0
+
+            Text {
+                anchors.centerIn: parent
+                text: "Hello Desktop!"
+                color: Theme.surfaceText
+            }
+
+            MouseArea {
+                anchors.fill: parent
+                enabled: !root.editMode
+                onClicked: doSomething()
+            }
+        }
+    }
+    ```
+  </Step>
+
+  <Step title="Add settings component (optional)">
+    Create `MySettings.qml` using `PluginSettings`. See the [Settings component](#settings-component) section below.
+  </Step>
+
+  <Step title="Enable in Settings → Plugins">
+    1. Open Settings (`Ctrl+,`)
+    2. Navigate to **Plugins**
+    3. Click **Scan for Plugins**
+    4. Enable your desktop plugin with the toggle switch
+  </Step>
+</Steps>
+
+## Desktop widget component contract
+
+Your QML component must declare these properties to receive injected values from the `DesktopPluginWrapper`:
+
+### Required injected properties
+
+| Property       | Type   | Description                                                            |
+| -------------- | ------ | ---------------------------------------------------------------------- |
+| `pluginService`| var    | Reference to `PluginService` for data persistence                      |
+| `pluginId`     | string | The plugin's unique identifier string                                  |
+| `editMode`     | bool   | `true` when the user is dragging or resizing the widget                |
+| `widgetWidth`  | real   | Current width of the widget container in pixels                        |
+| `widgetHeight` | real   | Current height of the widget container in pixels                       |
+
+### Optional properties
+
+| Property    | Type | Default | Description                                  |
+| ----------- | ---- | ------- | -------------------------------------------- |
+| `minWidth`  | real | 100     | Minimum allowed widget width in pixels       |
+| `minHeight` | real | 100     | Minimum allowed widget height in pixels      |
+
+## Edit mode
+
+When `editMode` is `true`, the user is repositioning or resizing the widget. Use this to show visual indicators, highlight the widget border, or disable interactive elements that would conflict with dragging:
+
+```qml
+Rectangle {
+    anchors.fill: parent
+    border.color: root.editMode ? Theme.primary : "transparent"
+    border.width: root.editMode ? 2 : 0
+
+    MouseArea {
+        anchors.fill: parent
+        enabled: !root.editMode
+        onClicked: doSomething()
+    }
+}
+```
+
+Edit mode is toggled by clicking the edit button in the bottom-right corner of the screen.
+
+**User interactions in edit mode:**
+- **Drag** — click and drag anywhere on the widget to reposition it
+- **Resize** — drag the bottom-right corner handle to resize
+- **Edit mode toggle** — click the global edit button to exit edit mode
+
+## Position and size persistence
+
+Position (`desktopX`, `desktopY`) and size (`desktopWidth`, `desktopHeight`) are automatically saved and restored by the `DesktopPluginWrapper`. You do not need to implement position or size persistence in your widget code.
+
+## Loading and saving widget-specific data
+
+Use the injected `pluginService` to persist any widget-specific data (e.g. user configuration, display preferences):
+
+```qml
+property string myValue: pluginService
+    ? pluginService.loadPluginData(pluginId, "myValue", "default")
+    : "default"
+
+Connections {
+    target: pluginService
+    function onPluginDataChanged(changedPluginId) {
+        if (changedPluginId !== pluginId) return;
+        root.myValue = pluginService.loadPluginData(pluginId, "myValue", "default");
+    }
+}
+
+function saveMyValue(value) {
+    if (pluginService) {
+        pluginService.savePluginData(pluginId, "myValue", value);
+    }
+}
+```
+
+<Tip>
+Always use `pluginId` (the injected property) rather than a hardcoded string when calling `loadPluginData` and `savePluginData`. This ensures your data is correctly namespaced even if the plugin is renamed.
+</Tip>
+
+## Settings component
+
+Create a settings component using `PluginSettings` for the inline settings accordion in the Plugins tab. Requires `settings_write` permission.
+
+```qml
+import QtQuick
+import qs.Common
+import qs.Widgets
+import qs.Modules.Plugins
+
+PluginSettings {
+    pluginId: "myDesktopWidget"
+
+    ToggleSetting {
+        settingKey: "showBorder"
+        label: "Show Border"
+        description: "Display a border around the widget"
+        defaultValue: true
+    }
+
+    SelectionSetting {
+        settingKey: "theme"
+        label: "Theme"
+        description: "Choose the widget's colour theme"
+        options: [
+            {label: "Light", value: "light"},
+            {label: "Dark", value: "dark"}
+        ]
+        defaultValue: "dark"
+    }
+}
+```
+
+All settings automatically save on change and load on component creation. No manual `pluginService.savePluginData()` calls are needed inside the settings component.
+
+## Best practices
+
+- Always declare all injected properties at the top of your component so the shell can inject them
+- Check `pluginService` for `null` before calling any of its methods
+- Use `editMode` to disable interactive elements during drag/resize to avoid accidental activations
+- Keep your widget lightweight — desktop widgets render continuously behind all windows
+- Set sensible `minWidth` and `minHeight` values to prevent the widget from becoming unusably small
+- Use `Theme` properties for colours, spacing, and corner radii to stay consistent with the shell theme

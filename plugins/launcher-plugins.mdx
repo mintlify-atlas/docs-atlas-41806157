@@ -1,0 +1,373 @@
+---
+title: "Building Launcher Extension Plugins for DankMaterialShell"
+description: "Create DMS launcher plugins: implement getItems and executeItem, configure trigger strings, use Material or Unicode icons, and add user-configurable settings."
+---
+
+Launcher plugins extend the DMS application launcher by injecting custom searchable items alongside regular apps. They support trigger strings for scoped filtering — for example, typing `#` in the launcher shows only your plugin's items — and can execute configurable actions (toast notifications, clipboard copies, shell commands, and more) when the user selects an item.
+
+## Plugin type configuration
+
+Set `"type": "launcher"` in `plugin.json`. Launcher plugins also require a `trigger` field that defines the prefix the user types to activate your plugin:
+
+```json
+{
+    "id": "myLauncher",
+    "name": "My Launcher Plugin",
+    "description": "A custom launcher plugin for quick actions",
+    "version": "1.0.0",
+    "author": "Your Name",
+    "type": "launcher",
+    "capabilities": ["show-thing"],
+    "component": "./MyLauncher.qml",
+    "trigger": "#",
+    "icon": "search",
+    "settings": "./MySettings.qml",
+    "requires_dms": ">=0.1.18",
+    "permissions": ["settings_read", "settings_write"]
+}
+```
+
+## Creating a launcher plugin
+
+<Steps>
+  <Step title="Create plugin directory">
+    ```bash
+    mkdir -p ~/.config/DankMaterialShell/plugins/MyLauncher
+    cd ~/.config/DankMaterialShell/plugins/MyLauncher
+    ```
+  </Step>
+
+  <Step title="Create plugin.json">
+    Use the manifest example above, replacing field values with your own plugin details.
+  </Step>
+
+  <Step title="Implement the launcher component contract">
+    Create `MyLauncher.qml`. The launcher calls `getItems(query)` to fetch items and `executeItem(item)` when the user selects one. Both functions are required.
+
+    ```qml
+    import QtQuick
+    import qs.Services
+
+    Item {
+        id: root
+
+        // Required properties
+        property var pluginService: null
+        property string trigger: "#"
+
+        // Required signal
+        signal itemsChanged()
+
+        // Required: return array of launcher items
+        function getItems(query) {
+            const allItems = [
+                {
+                    name: "Item Name",
+                    icon: "material:lightbulb",
+                    comment: "Description shown as subtitle",
+                    action: "toast:Hello!",
+                    categories: ["MyLauncher"]
+                },
+                {
+                    name: "Copy Something",
+                    icon: "unicode:📋",
+                    comment: "Copy text to clipboard",
+                    action: "copy:some text",
+                    categories: ["MyLauncher"]
+                }
+            ]
+
+            if (!query || query.length === 0) {
+                return allItems
+            }
+
+            const lowerQuery = query.toLowerCase()
+            return allItems.filter(item => {
+                return item.name.toLowerCase().includes(lowerQuery) ||
+                       item.comment.toLowerCase().includes(lowerQuery)
+            })
+        }
+
+        // Required: execute item action
+        function executeItem(item) {
+            const actionParts = item.action.split(":")
+            const actionType = actionParts[0]
+            const actionData = actionParts.slice(1).join(":")
+
+            switch (actionType) {
+                case "toast":
+                    if (typeof ToastService !== "undefined") {
+                        ToastService.showInfo("Plugin", actionData)
+                    }
+                    break
+                case "copy":
+                    // Copy to clipboard
+                    break
+                case "exec":
+                    // Execute command
+                    break
+                case "script":
+                    // Run script
+                    break
+                default:
+                    console.warn("Unknown action:", actionType)
+            }
+        }
+
+        Component.onCompleted: {
+            if (pluginService) {
+                trigger = pluginService.loadPluginData("myLauncher", "trigger", "#")
+            }
+        }
+    }
+    ```
+  </Step>
+
+  <Step title="Create settings component (optional)">
+    Expose trigger configuration to users via a settings component. See [Trigger configuration in settings](#trigger-configuration-in-settings) below.
+  </Step>
+
+  <Step title="Enable in Settings → Plugins">
+    1. Open Settings (`Ctrl+,`)
+    2. Navigate to **Plugins**
+    3. Click **Scan for Plugins**
+    4. Enable your launcher plugin with the toggle switch
+  </Step>
+</Steps>
+
+## Launcher component contract
+
+Your QML component must expose the following interface so the launcher can call it:
+
+| Member            | Kind     | Required | Description                                                         |
+| ----------------- | -------- | -------- | ------------------------------------------------------------------- |
+| `pluginService`   | property | Yes      | Injected by the shell; gives access to `loadPluginData` etc.        |
+| `trigger`         | property | Yes      | The string prefix that activates this plugin (e.g. `"#"`)           |
+| `itemsChanged()`  | signal   | Yes      | Emit when your item list changes to tell the launcher to refresh    |
+| `getItems(query)` | function | Yes      | Return an array of item objects filtered by `query`                 |
+| `executeItem(item)`| function| Yes      | Called when the user selects an item; perform the action here       |
+
+## Item structure
+
+Each object returned from `getItems()` must have the following shape:
+
+```qml
+{
+    name: "Item Name",        // Display name shown in the launcher
+    icon: "material:star",   // Icon specification (see Icon types below)
+    comment: "Description",  // Subtitle text
+    action: "type:data",     // Action identifier
+    categories: ["MyPlugin"] // Array containing your plugin name
+}
+```
+
+`icon` is optional — omit it to hide the icon area entirely.
+
+## Icon types
+
+<AccordionGroup>
+  <Accordion title="Material Design icons — material: prefix">
+    Any icon from the Material Symbols Rounded font. Use the `material:` prefix followed by the icon name.
+
+    ```javascript
+    {
+        name: "Idea",
+        icon: "material:lightbulb",
+        comment: "Uses Material Design icon",
+        action: "toast:Hello!",
+        categories: ["MyPlugin"]
+    }
+    ```
+
+    Available icons: `lightbulb`, `star`, `favorite`, `settings`, `terminal`, `translate`, `sentiment_satisfied`, and thousands more.
+  </Accordion>
+
+  <Accordion title="Unicode / emoji icons — unicode: prefix">
+    Any Unicode character or emoji rendered at 70–80% of the icon area size.
+
+    ```javascript
+    {
+        name: "Grinning Face",
+        icon: "unicode:😀",
+        comment: "Copy emoji to clipboard",
+        action: "copy:😀",
+        categories: ["MyPlugin"]
+    }
+    ```
+
+    Perfect for emoji pickers, symbol selectors, or character libraries.
+  </Accordion>
+
+  <Accordion title="Desktop theme icons">
+    Uses the user's installed icon theme. Pass the icon name directly (no prefix).
+
+    ```javascript
+    {
+        name: "Firefox",
+        icon: "firefox",
+        comment: "Launches Firefox browser",
+        action: "exec:firefox",
+        categories: ["MyPlugin"]
+    }
+    ```
+
+    Common examples: `firefox`, `chrome`, `folder`, `text-editor`.
+  </Accordion>
+
+  <Accordion title="No icon">
+    Omit the `icon` field entirely. The launcher hides the icon area and gives full width to the item name.
+
+    ```javascript
+    {
+        name: "😀  Grinning Face",
+        comment: "Copy emoji to clipboard",
+        action: "copy:😀",
+        categories: ["MyPlugin"]
+    }
+    ```
+
+    Useful when you want emojis or symbols to be part of the item name itself.
+  </Accordion>
+</AccordionGroup>
+
+## Trigger system
+
+| Mode                | Behaviour                                                             |
+| ------------------- | --------------------------------------------------------------------- |
+| **Custom trigger**  | Items appear only when the user types the trigger (e.g. `#`)         |
+| **Empty trigger**   | Items always appear alongside regular apps; search includes them too  |
+
+With a custom trigger:
+- User types `#` → all your plugin's items appear
+- User types `# query` → `getItems("query")` is called and results are filtered
+
+The query string (after the trigger and a space) is passed directly to your `getItems(query)` function. Implement filtering inside that function.
+
+```qml
+function getItems(query) {
+    const allItems = [
+        {name: "Item 1", comment: "First item", action: "toast:one", categories: ["MyPlugin"]},
+        {name: "Item 2", comment: "Second item", action: "toast:two", categories: ["MyPlugin"]},
+        {name: "Test Item", comment: "Test", action: "toast:test", categories: ["MyPlugin"]}
+    ]
+
+    if (!query || query.length === 0) {
+        return allItems
+    }
+
+    const lowerQuery = query.toLowerCase()
+    return allItems.filter(item => {
+        return item.name.toLowerCase().includes(lowerQuery) ||
+               item.comment.toLowerCase().includes(lowerQuery)
+    })
+}
+```
+
+## Trigger configuration in settings
+
+Allow users to change the trigger (or disable it entirely) from your plugin's settings component:
+
+```qml
+import QtQuick
+import QtQuick.Controls
+import qs.Widgets
+
+FocusScope {
+    id: root
+
+    property var pluginService: null
+
+    Column {
+        spacing: 12
+
+        CheckBox {
+            id: noTriggerToggle
+            text: "No trigger (always show)"
+            checked: loadSettings("noTrigger", false)
+
+            onCheckedChanged: {
+                saveSettings("noTrigger", checked)
+                if (checked) {
+                    saveSettings("trigger", "")
+                } else {
+                    saveSettings("trigger", triggerField.text || "#")
+                }
+            }
+        }
+
+        DankTextField {
+            id: triggerField
+            visible: !noTriggerToggle.checked
+            text: loadSettings("trigger", "#")
+            placeholderText: "#"
+
+            onTextEdited: {
+                saveSettings("trigger", text || "#")
+            }
+        }
+    }
+
+    function saveSettings(key, value) {
+        if (pluginService) {
+            pluginService.savePluginData("myLauncher", key, value)
+        }
+    }
+
+    function loadSettings(key, defaultValue) {
+        if (pluginService) {
+            return pluginService.loadPluginData("myLauncher", key, defaultValue)
+        }
+        return defaultValue
+    }
+}
+```
+
+## Action execution
+
+Handle each action type in `executeItem()` by splitting the `action` string on `:`:
+
+```qml
+function executeItem(item) {
+    const actionParts = item.action.split(":")
+    const actionType = actionParts[0]
+    const actionData = actionParts.slice(1).join(":")
+
+    switch (actionType) {
+        case "toast":
+            if (typeof ToastService !== "undefined") {
+                ToastService.showInfo("Plugin", actionData)
+            }
+            break
+        case "copy":
+            // Copy actionData to clipboard
+            break
+        case "exec":
+            // Execute actionData as a shell command
+            break
+        case "script":
+            // Run a script referenced by actionData
+            break
+        default:
+            console.warn("Unknown action:", actionType)
+    }
+}
+```
+
+## Integration flow
+
+1. User opens the DMS launcher
+2. **Empty trigger:** your items appear alongside regular apps automatically
+3. **Custom trigger:** user types the trigger string (e.g. `#`)
+4. Launcher calls `getItems(query)` on your component
+5. Your items are displayed under your plugin's category
+6. User selects an item and presses Enter
+7. Launcher calls `executeItem(item)` on your component
+
+## Best practices
+
+- Choose a trigger string that does not conflict with other installed launcher plugins
+- Return results from `getItems()` quickly — avoid slow synchronous operations
+- Use descriptive `name` and `comment` fields so items are easy to identify
+- Always check exit codes and handle errors gracefully in `executeItem()`
+- Destroy any temporary objects created during `executeItem()` after use
+- Consider supporting an empty trigger so power users can surface your items without a prefix

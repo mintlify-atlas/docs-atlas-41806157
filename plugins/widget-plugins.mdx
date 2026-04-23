@@ -1,0 +1,573 @@
+---
+title: "Building Bar Widget Plugins for DankMaterialShell"
+description: "Build DankBar and Control Center widget plugins using PluginComponent with popouts, CC tiles, PluginGlobalVar for multi-monitor state, and settings components."
+---
+
+Widget plugins render UI components directly inside DankBar or Control Center. They appear as pills in the top, bottom, left, or right bar positions and can optionally surface a popout panel, a Control Center toggle tile, or custom click actions. Each widget is a QML file that wraps its content in the `PluginComponent` type, which handles bar orientation, positioning, and theme integration automatically.
+
+## Creating your first widget plugin
+
+<Steps>
+  <Step title="Create plugin directory">
+    ```bash
+    mkdir -p ~/.config/DankMaterialShell/plugins/MyPlugin
+    cd ~/.config/DankMaterialShell/plugins/MyPlugin
+    ```
+  </Step>
+
+  <Step title="Create plugin.json">
+    ```json
+    {
+        "id": "myPlugin",
+        "name": "My Plugin",
+        "description": "A sample plugin",
+        "version": "1.0.0",
+        "author": "Your Name",
+        "type": "widget",
+        "capabilities": ["dankbar-widget"],
+        "component": "./MyWidget.qml",
+        "icon": "extension",
+        "settings": "./MySettings.qml",
+        "requires_dms": ">=0.1.0",
+        "permissions": ["settings_read", "settings_write"]
+    }
+    ```
+  </Step>
+
+  <Step title="Create MyWidget.qml with PluginComponent">
+    Every widget plugin uses `PluginComponent` as its root type. Define `horizontalBarPill` for top/bottom bars and `verticalBarPill` for left/right bars.
+
+    ```qml
+    import QtQuick
+    import qs.Common
+    import qs.Widgets
+    import qs.Modules.Plugins
+
+    PluginComponent {
+        horizontalBarPill: Component {
+            StyledRect {
+                width: textItem.implicitWidth + Theme.spacingM * 2
+                height: parent.widgetThickness
+                radius: Theme.cornerRadius
+                color: Theme.surfaceContainerHigh
+
+                StyledText {
+                    id: textItem
+                    anchors.centerIn: parent
+                    text: "Hello World"
+                    color: Theme.surfaceText
+                    font.pixelSize: Theme.fontSizeMedium
+                }
+            }
+        }
+
+        verticalBarPill: Component {
+            StyledRect {
+                width: parent.widgetThickness
+                height: textItem.implicitWidth + Theme.spacingM * 2
+                radius: Theme.cornerRadius
+                color: Theme.surfaceContainerHigh
+
+                StyledText {
+                    id: textItem
+                    anchors.centerIn: parent
+                    text: "Hello"
+                    color: Theme.surfaceText
+                    font.pixelSize: Theme.fontSizeSmall
+                    rotation: 90
+                }
+            }
+        }
+    }
+    ```
+  </Step>
+
+  <Step title="Create MySettings.qml (optional)">
+    See the [Settings component](#settings-component) section below for the full API.
+
+    ```qml
+    import QtQuick
+    import qs.Common
+    import qs.Widgets
+    import qs.Modules.Plugins
+
+    PluginSettings {
+        pluginId: "myPlugin"
+
+        StringSetting {
+            settingKey: "text"
+            label: "Display Text"
+            description: "Text shown in the bar widget"
+            placeholder: "Hello World"
+            defaultValue: "Hello World"
+        }
+
+        ToggleSetting {
+            settingKey: "showIcon"
+            label: "Show Icon"
+            description: "Display an icon next to the text"
+            defaultValue: true
+        }
+    }
+    ```
+  </Step>
+
+  <Step title="Enable in Settings → Plugins">
+    1. Open Settings (`Ctrl+,`)
+    2. Navigate to the **Plugins** tab
+    3. Click **Scan for Plugins**
+    4. Enable your plugin with the toggle switch
+  </Step>
+
+  <Step title="Add to DankBar layout">
+    Open **Settings → Appearance → DankBar Layout**, add a widget entry with your plugin ID and choose a section (left, center, right). Alternatively, edit `config.json` directly:
+
+    ```json
+    {
+        "dankBarLeftWidgets": [
+            {"widgetId": "myPlugin", "enabled": true}
+        ]
+    }
+    ```
+  </Step>
+</Steps>
+
+## Bar pill variants
+
+<Tabs>
+  <Tab title="Horizontal bar pill">
+    Used when DankBar is in a top or bottom position. The `parent.widgetThickness` property gives you the recommended height perpendicular to the bar.
+
+    ```qml
+    PluginComponent {
+        horizontalBarPill: Component {
+            StyledRect {
+                width: content.implicitWidth + Theme.spacingM * 2
+                height: parent.widgetThickness
+                radius: Theme.cornerRadius
+                color: Theme.surfaceContainerHigh
+
+                StyledText {
+                    id: content
+                    anchors.centerIn: parent
+                    text: "Hello World"
+                    color: Theme.surfaceText
+                    font.pixelSize: Theme.fontSizeMedium
+                }
+            }
+        }
+    }
+    ```
+  </Tab>
+
+  <Tab title="Vertical bar pill">
+    Used when DankBar is in a left or right position. Rotate text 90° for a natural vertical label.
+
+    ```qml
+    PluginComponent {
+        verticalBarPill: Component {
+            StyledRect {
+                width: parent.widgetThickness
+                height: content.implicitWidth + Theme.spacingM * 2
+                radius: Theme.cornerRadius
+                color: Theme.surfaceContainerHigh
+
+                StyledText {
+                    id: content
+                    anchors.centerIn: parent
+                    text: "Hello"
+                    color: Theme.surfaceText
+                    font.pixelSize: Theme.fontSizeSmall
+                    rotation: 90
+                }
+            }
+        }
+    }
+    ```
+  </Tab>
+
+  <Tab title="With popout">
+    Clicking the bar pill opens a floating popout. Set `popoutContent`, `popoutWidth`, and `popoutHeight`.
+
+    ```qml
+    PluginComponent {
+        horizontalBarPill: Component {
+            StyledRect {
+                width: content.implicitWidth + Theme.spacingM * 2
+                height: parent.widgetThickness
+                radius: Theme.cornerRadius
+                color: Theme.surfaceContainerHigh
+
+                StyledText {
+                    id: content
+                    anchors.centerIn: parent
+                    text: "My Plugin"
+                    color: Theme.surfaceText
+                    font.pixelSize: Theme.fontSizeMedium
+                }
+            }
+        }
+
+        popoutContent: Component {
+            PopoutComponent {
+                headerText: "My Plugin"
+                detailsText: "Optional description text goes here"
+                showCloseButton: true
+
+                Column {
+                    width: parent.width
+                    spacing: Theme.spacingM
+
+                    StyledText {
+                        text: "Popout Content"
+                        font.pixelSize: Theme.fontSizeLarge
+                        color: Theme.surfaceText
+                    }
+                }
+            }
+        }
+
+        popoutWidth: 400
+        popoutHeight: 300
+    }
+    ```
+  </Tab>
+
+  <Tab title="Control Center">
+    Add your plugin as a toggle tile in Control Center by declaring the `cc*` properties.
+
+    ```qml
+    PluginComponent {
+        property bool isEnabled: false
+
+        ccWidgetIcon: "toggle_on"
+        ccWidgetPrimaryText: "My Feature"
+        ccWidgetSecondaryText: isEnabled ? "Active" : "Inactive"
+        ccWidgetIsActive: isEnabled
+
+        onCcWidgetToggled: {
+            isEnabled = !isEnabled
+            if (pluginService) {
+                pluginService.savePluginData("myPlugin", "isEnabled", isEnabled)
+            }
+        }
+
+        ccDetailContent: Component {
+            Rectangle {
+                implicitHeight: 200
+                color: Theme.surfaceContainerHigh
+                radius: Theme.cornerRadius
+            }
+        }
+
+        horizontalBarPill: Component { /* ... */ }
+    }
+    ```
+
+    **CC widget sizing:**
+    - 25% width → SmallToggleButton (icon only)
+    - 50% width → ToggleButton (no detail) or CompoundPill (with `ccDetailContent`)
+    - Users can resize tiles in edit mode
+  </Tab>
+</Tabs>
+
+## PluginComponent properties
+
+`PluginComponent` automatically injects these properties into your pill components:
+
+| Property          | Type    | Description                                        |
+| ----------------- | ------- | -------------------------------------------------- |
+| `axis`            | object  | Bar axis information (horizontal/vertical)         |
+| `section`         | string  | Bar section: `"left"`, `"center"`, or `"right"`    |
+| `parentScreen`    | object  | Screen reference for multi-monitor support         |
+| `widgetThickness` | real    | Recommended size perpendicular to the bar          |
+| `barThickness`    | real    | Bar thickness parallel to the screen edge          |
+
+## Custom click actions
+
+Override the default popout behaviour with `pillClickAction` and `pillRightClickAction`:
+
+```qml
+pillClickAction: () => {
+    Process.exec("bash", ["-c", "notify-send 'Clicked!'"])
+}
+
+// With position params: (x, y, width, section, screen)
+pillClickAction: (x, y, width, section, screen) => {
+    popoutService?.toggleControlCenter(x, y, width, section, screen)
+}
+
+pillRightClickAction: () => {
+    Process.exec("bash", ["-c", "notify-send 'Right clicked!'"])
+}
+```
+
+## PopoutComponent
+
+Use `PopoutComponent` inside `popoutContent` for a consistent header-and-content layout:
+
+```qml
+import qs.Modules.Plugins
+
+PopoutComponent {
+    headerText: "Header Title"
+    detailsText: "Description text"
+    showCloseButton: true
+
+    // headerHeight and detailsHeight are readonly — use them to calculate available space
+    DankGridView {
+        width: parent.width
+        height: parent.height
+    }
+}
+```
+
+| Property          | Type    | Description                                           |
+| ----------------- | ------- | ----------------------------------------------------- |
+| `headerText`      | string  | Main header (hidden if empty)                         |
+| `detailsText`     | string  | Description below header (hidden if empty)            |
+| `showCloseButton` | bool    | Show close button in header (default: `false`)        |
+| `headerHeight`    | int     | Readonly height of header area                        |
+| `detailsHeight`   | int     | Readonly height of description area                   |
+
+## Plugin global variables
+
+When the same widget appears on multiple monitors, use `PluginGlobalVar` to keep state synchronized across all instances:
+
+```qml
+import QtQuick
+import qs.Widgets
+import qs.Modules.Plugins
+
+PluginComponent {
+    PluginGlobalVar {
+        id: globalCounter
+        varName: "counter"
+        defaultValue: 0
+    }
+
+    horizontalBarPill: Component {
+        StyledRect {
+            width: content.implicitWidth + Theme.spacingM * 2
+            height: parent.widgetThickness
+            radius: Theme.cornerRadius
+            color: Theme.surfaceContainerHigh
+
+            StyledText {
+                id: content
+                anchors.centerIn: parent
+                text: "Count: " + globalCounter.value
+                color: Theme.surfaceText
+            }
+
+            MouseArea {
+                anchors.fill: parent
+                onClicked: globalCounter.set(globalCounter.value + 1)
+            }
+        }
+    }
+}
+```
+
+| Property / method  | Description                                                |
+| ------------------ | ---------------------------------------------------------- |
+| `varName`          | Name of the global variable (required)                     |
+| `defaultValue`     | Value used when no global value is set yet                 |
+| `value`            | Readonly current value                                     |
+| `set(newValue)`    | Update the variable and trigger reactivity in all instances|
+
+<Tip>
+Global variables are runtime-only — they reset when the shell restarts. Use `pluginService.savePluginData()` for values that must survive restarts.
+</Tip>
+
+## Settings component
+
+Add a `YourSettings.qml` file and reference it in `plugin.json` as `"settings": "./YourSettings.qml"` to enable the inline settings accordion in the Plugins tab. Requires the `settings_write` permission.
+
+### All setting types
+
+```qml
+import QtQuick
+import qs.Common
+import qs.Widgets
+import qs.Modules.Plugins
+
+PluginSettings {
+    pluginId: "myPlugin"
+
+    StyledText {
+        width: parent.width
+        text: "General Settings"
+        font.pixelSize: Theme.fontSizeLarge
+        font.weight: Font.Bold
+        color: Theme.surfaceText
+    }
+
+    StringSetting {
+        settingKey: "apiKey"
+        label: "API Key"
+        description: "Your service API key"
+        placeholder: "sk-..."
+        defaultValue: ""
+    }
+
+    ToggleSetting {
+        settingKey: "enabled"
+        label: "Enable Feature"
+        description: "Turn this feature on or off"
+        defaultValue: true
+    }
+
+    SelectionSetting {
+        settingKey: "theme"
+        label: "Theme"
+        description: "Choose your preferred theme"
+        options: [
+            {label: "Dark", value: "dark"},
+            {label: "Light", value: "light"},
+            {label: "Auto", value: "auto"}
+        ]
+        defaultValue: "dark"
+    }
+
+    ListSetting {
+        id: itemList
+        settingKey: "items"
+        label: "Saved Items"
+        description: "List of configured items"
+        delegate: Component {
+            StyledRect {
+                width: parent.width
+                height: 40
+                radius: Theme.cornerRadius
+                color: Theme.surfaceContainerHigh
+
+                StyledText {
+                    anchors.left: parent.left
+                    anchors.leftMargin: Theme.spacingM
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: modelData.name
+                    color: Theme.surfaceText
+                }
+
+                Rectangle {
+                    anchors.right: parent.right
+                    anchors.rightMargin: Theme.spacingM
+                    anchors.verticalCenter: parent.verticalCenter
+                    width: 60
+                    height: 28
+                    color: removeArea.containsMouse ? Theme.errorHover : Theme.error
+                    radius: Theme.cornerRadius
+
+                    StyledText {
+                        anchors.centerIn: parent
+                        text: "Remove"
+                        color: Theme.errorText
+                        font.pixelSize: Theme.fontSizeSmall
+                        font.weight: Font.Medium
+                    }
+
+                    MouseArea {
+                        id: removeArea
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: itemList.removeItem(index)
+                    }
+                }
+            }
+        }
+    }
+
+    ListSettingWithInput {
+        settingKey: "locations"
+        label: "Locations"
+        description: "Track multiple locations"
+        defaultValue: []
+        fields: [
+            {id: "name", label: "Name", placeholder: "Home", width: 150, required: true},
+            {id: "timezone", label: "Timezone", placeholder: "America/New_York", width: 200, required: true}
+        ]
+    }
+}
+```
+
+### Setting component reference
+
+| Component              | Description                                                        |
+| ---------------------- | ------------------------------------------------------------------ |
+| `PluginSettings`       | Root wrapper; set `pluginId` here                                  |
+| `StringSetting`        | Text input field; vertical stack layout                            |
+| `ToggleSetting`        | Boolean toggle switch; horizontal layout                           |
+| `SelectionSetting`     | Dropdown; `options` is an array of `{label, value}` objects        |
+| `ListSetting`          | Managed list with custom `delegate` component                      |
+| `ListSettingWithInput` | List with auto-generated input form driven by `fields` definitions |
+
+All settings automatically save on change and load on component creation. No manual `pluginService` calls are needed inside settings components.
+
+## Data persistence
+
+For values outside of the settings accordion (e.g. saving state from a popout), call the `pluginService` API directly:
+
+```qml
+// Save a value
+if (pluginService) {
+    pluginService.savePluginData("myPlugin", "isEnabled", isEnabled)
+}
+
+// Load a value with a default
+property bool isEnabled: pluginService
+    ? pluginService.loadPluginData("myPlugin", "isEnabled", false)
+    : false
+```
+
+## Running external commands
+
+Use the `Proc` singleton from `qs.Common` to run external commands and capture output:
+
+```qml
+import QtQuick
+import qs.Common
+
+Item {
+    function fetchData() {
+        Proc.runCommand(
+            "myPlugin.fetchData",
+            ["curl", "-s", "https://api.example.com/data"],
+            (stdout, exitCode) => {
+                if (exitCode === 0) {
+                    processData(stdout)
+                }
+            },
+            100
+        )
+    }
+}
+```
+
+`Proc.runCommand(id, command, callback, debounceMs)` — the `id` is used for debouncing: rapid calls with the same ID within the debounce window only execute the last one.
+
+Use `["sh", "-c", "command | pipe"]` for shell pipelines. Recommended debounce values:
+- 50–100 ms for system monitoring
+- 300–500 ms for user input / search fields
+- 500–1000 ms for network requests
+
+## Clipboard access
+
+Copy text to the clipboard using the built-in `dms cl copy` command via `Quickshell.execDetached`:
+
+```qml
+import QtQuick
+import Quickshell
+
+MouseArea {
+    onClicked: {
+        Quickshell.execDetached(["dms", "cl", "copy", modelData])
+        ToastService.showInfo("Copied " + modelData + " to clipboard")
+    }
+}
+```
+
+<Warning>
+Do not use `globalThis.clipboard` or similar JavaScript clipboard APIs — they do not exist in the QML runtime. Always use `Quickshell.execDetached(["dms", "cl", "copy", text])`.
+</Warning>

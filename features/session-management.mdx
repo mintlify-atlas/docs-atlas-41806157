@@ -1,0 +1,121 @@
+---
+title: "Session Management: Lock Screen and Idle Control"
+description: "DMS replaces swaylock and swayidle with a built-in lock screen, idle detection with AC/battery profiles, idle inhibit, greetd greeter support, and a power menu."
+---
+
+DankMaterialShell includes a complete session management stack. It replaces swaylock for screen locking and swayidle for idle detection, managing both from a single integrated system that adapts to AC or battery power. A built-in greeter supports greetd for login screen use, and a power menu provides access to shutdown, reboot, suspend, and logout.
+
+## Lock screen
+
+The lock screen is implemented directly in the shell. It uses PAM for authentication and supports keyboard layout switching during unlock.
+
+```bash
+# Lock the screen immediately
+dms ipc call lock lock
+
+# Show the lock screen UI in demo mode (does not actually lock — useful for screenshots and previews)
+dms ipc call lock demo
+
+# Check whether the screen is currently locked
+dms ipc call lock isLocked
+```
+
+<Tip>
+  Bind the lock command to a keybind in your compositor config for quick locking:
+
+  ```conf
+  # Hyprland
+  bind = SUPER, L, exec, qs -c dms ipc call lock lock
+  ```
+
+  ```kdl
+  # niri
+  binds {
+      Mod+L { spawn "qs" "-c" "dms" "ipc" "call" "lock" "lock"; }
+  }
+  ```
+</Tip>
+
+## Idle detection
+
+DMS monitors user activity and triggers actions after configurable idle timeouts. Separate timeout profiles apply when the system is on AC power versus battery.
+
+### Idle actions
+
+| Action | Trigger |
+|--------|---------|
+| Monitor off (DPMS) | After the monitor timeout elapses |
+| Lock screen | After the lock timeout elapses |
+| Suspend / hibernate | After the suspend timeout elapses |
+
+Each timeout is configured independently, and all three can be set to different values for AC and battery profiles. Timeouts are configured in **Settings → Session → Idle**.
+
+### AC vs battery profiles
+
+The idle service automatically switches between profiles based on whether a battery is detected and the system is plugged in:
+
+- **AC profile** — longer timeouts appropriate for desktop or plugged-in laptop use
+- **Battery profile** — shorter timeouts to conserve power when running on battery
+
+### Post-lock monitor timeout
+
+A separate timeout controls how long the monitor stays on after the screen is locked. This allows the monitor to turn off sooner when locked than when idle but unlocked.
+
+## Idle inhibit
+
+Idle inhibit prevents the system from locking or sleeping. This is useful when watching a video, running a long task, or presenting.
+
+```bash
+# Toggle idle inhibit on/off
+dms ipc call inhibit toggle
+
+# Enable or disable explicitly
+dms ipc call inhibit enable
+dms ipc call inhibit disable
+```
+
+DankBar includes a built-in idle inhibitor widget that shows the current inhibit state and lets you toggle it with a click.
+
+<Note>
+  External applications can also inhibit idle via the `org.freedesktop.ScreenSaver` D-Bus interface. DMS implements this interface, so media players and presentation tools that request screensaver inhibition are respected automatically.
+</Note>
+
+## Greeter support
+
+DMS includes a greeter module for use with [greetd](https://git.sr.ht/~kennylevinsen/greetd), the minimal login manager. When installed as a greeter, DMS presents the same lock screen UI at the login screen.
+
+```bash
+# Install DMS as the greetd greeter
+dms greeter install
+```
+
+This command writes the appropriate greetd configuration to use DMS as the greeter session. After installation, restart greetd to apply the change.
+
+## Power menu
+
+The power menu provides access to system power actions from the keyboard or a bar button.
+
+```bash
+# Toggle the power menu
+dms ipc call powermenu toggle
+
+# Open or close explicitly
+dms ipc call powermenu open
+dms ipc call powermenu close
+```
+
+Available actions in the power menu:
+
+- **Logout** — exits the compositor session
+- **Suspend** — suspends the system via systemctl or loginctl (elogind)
+- **Hibernate** — hibernates if supported by the kernel (`/sys/power/state`)
+- **Reboot** — reboots the system
+- **Shutdown** — powers off the system
+
+Each action can be overridden with a custom command in **Settings → Session → Power Actions**.
+
+## Replacing swaylock and swayidle
+
+DMS handles everything swaylock and swayidle provide. You do not need to start either service when running DMS. If your compositor configuration starts swaylock or swayidle, remove those entries to avoid conflicts.
+
+Run `dms doctor` to detect conflicting services or missing configuration.

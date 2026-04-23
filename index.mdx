@@ -1,97 +1,85 @@
 ---
-title: "Introduction"
-description: "Welcome to the new home for your documentation"
+title: "DankMaterialShell: Material Design Wayland Desktop Shell"
+description: "DankMaterialShell is a complete desktop shell for Wayland, built with Quickshell and Go. Replaces waybar, swaylock, mako, and more with one unified shell."
 ---
 
-## Setting up
+DankMaterialShell (DMS) is a complete desktop environment for Wayland compositors. It replaces the patchwork of separate tools — waybar, swaylock, swayidle, mako, fuzzel, and polkit — with a single, cohesive shell built on [Quickshell](https://quickshell.org/) and Go. Dynamic wallpaper-based theming, a powerful application launcher, a unified control center, and an extensible plugin system are all included out of the box.
 
-Get your documentation site up and running in minutes.
-
-<Card
-  title="Start here"
-  icon="rocket"
-  href="/quickstart"
-  horizontal
->
-  Follow our three step quickstart guide.
-</Card>
-
-## Make it yours
-
-Design a docs site that looks great and empowers your users.
-
-<Columns cols={2}>
-  <Card
-    title="Edit locally"
-    icon="pen-to-square"
-    href="/development"
-  >
-    Edit your docs locally and preview them in real time.
+<CardGroup cols={2}>
+  <Card title="Installation" icon="download" href="/installation">
+    One-command install on Arch, Fedora, Debian, Ubuntu, openSUSE, and Gentoo
   </Card>
-  <Card
-    title="Customize your site"
-    icon="palette"
-    href="/essentials/settings"
-  >
-    Customize the design and colors of your site to match your brand.
+  <Card title="Compositor Setup" icon="display" href="/compositors">
+    Configure DMS for Niri, Hyprland, Sway, MangoWC, labwc, and more
   </Card>
-    <Card
-    title="Set up navigation"
-    icon="map"
-    href="/essentials/navigation"
-  >
-    Organize your docs to help users find what they need and succeed with your product.
+  <Card title="CLI & IPC Reference" icon="terminal" href="/cli/overview">
+    Control the shell from the command line or compositor keybinds
   </Card>
-  <Card
-    title="API documentation"
-    icon="terminal"
-    href="/api-reference/introduction"
-  >
-    Auto-generate API documentation from OpenAPI specifications.
+  <Card title="Plugin Development" icon="puzzle-piece" href="/plugins/overview">
+    Build bar widgets, launcher extensions, and desktop widgets
   </Card>
-</Columns>
+</CardGroup>
 
-## Create beautiful pages
+## What DankMaterialShell provides
 
-Everything you need to create world-class documentation.
+DMS is a full desktop shell — not a status bar or widget toolkit. Everything you need for a functional Wayland desktop is included:
 
-<Columns cols={2}>
-  <Card
-    title="Write with MDX"
-    icon="pen-fancy"
-    href="/essentials/markdown"
-  >
-    Use MDX to style your docs pages.
+<CardGroup cols={2}>
+  <Card title="Dynamic Theming" icon="palette" href="/features/theming">
+    Wallpaper-based Material Design 3 color schemes that theme GTK, Qt, terminals, and editors automatically
   </Card>
-  <Card
-    title="Code samples"
-    icon="code"
-    href="/essentials/code"
-  >
-    Add sample code to demonstrate how to use your product.
+  <Card title="Bar & Widgets" icon="grip" href="/features/bar-and-widgets">
+    Fully customizable DankBar with workspace switching, system indicators, media controls, and plugin slots
   </Card>
-  <Card
-    title="Images"
-    icon="image"
-    href="/essentials/images"
-  >
-    Display images and other media.
+  <Card title="Spotlight Launcher" icon="magnifying-glass" href="/features/launcher">
+    Search apps, files, emojis, windows, and run calculations — all from one keyboard shortcut
   </Card>
-  <Card
-    title="Reusable snippets"
-    icon="recycle"
-    href="/essentials/reusable-snippets"
-  >
-    Write once and reuse across your docs.
+  <Card title="Control Center" icon="sliders" href="/features/control-center">
+    Unified panel for network, Bluetooth, audio, display brightness, and night mode
   </Card>
-</Columns>
+  <Card title="Smart Notifications" icon="bell" href="/features/notifications">
+    Notification center with grouping, rich text, and full keyboard navigation
+  </Card>
+  <Card title="Session Management" icon="lock" href="/features/session-management">
+    Lock screen, idle detection, auto-suspend with separate AC/battery profiles, and greeter support
+  </Card>
+</CardGroup>
 
-## Need inspiration?
+## Get up and running
 
-<Card
-  title="See complete examples"
-  icon="stars"
-  href="https://mintlify.com/customers"
->
-  Browse our showcase of exceptional documentation sites.
-</Card>
+<Steps>
+  <Step title="Install DankMaterialShell">
+    Run the one-line installer — it handles dependencies, compositor config, and first launch:
+    ```bash
+    curl -fsSL https://install.danklinux.com | sh
+    ```
+  </Step>
+  <Step title="Choose your compositor">
+    DMS works with Niri, Hyprland, Sway, MangoWC, labwc, Scroll, and Miracle WM. Follow the [compositor guide](/compositors) to set up keybinds and workspace integration.
+  </Step>
+  <Step title="Set your wallpaper and theme">
+    Set a wallpaper and DMS automatically generates a matching color scheme for your entire desktop:
+    ```bash
+    dms ipc call wallpaper set ~/Pictures/my-wallpaper.jpg
+    ```
+  </Step>
+  <Step title="Explore features and plugins">
+    Browse the [plugin registry](https://plugins.danklinux.com) to add bar widgets, launcher extensions, and desktop widgets. Read the [features overview](/features/theming) for everything included by default.
+  </Step>
+</Steps>
+
+## Supported compositors
+
+DMS supports the following Wayland compositors with full workspace switching, overview integration, and monitor management:
+
+| Compositor | Workspaces | Overview | IPC |
+|---|---|---|---|
+| [Niri](https://github.com/YaLTeR/niri) | Full | Yes | Yes |
+| [Hyprland](https://hyprland.org/) | Full | Yes | Yes |
+| [Sway](https://swaywm.org/) | Full | — | Yes |
+| [MangoWC](https://github.com/DreamMaoMao/mangowc) | Tags | — | dwl-ipc |
+| [labwc](https://labwc.github.io/) | Full | — | Yes |
+| [Scroll](https://github.com/dawsers/scroll) | Full | — | Yes |
+| [Miracle WM](https://github.com/miracle-wm-org/miracle-wm) | Full | — | Yes |
+
+Other Wayland compositors work with reduced feature support.

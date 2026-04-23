@@ -1,0 +1,83 @@
+---
+title: "Smart Notifications and Notification Center"
+description: "How DMS handles desktop notifications: app grouping, rich text rendering, persistent history, urgency rules, keyboard navigation, and Do Not Disturb mode."
+---
+
+DankMaterialShell replaces mako, dunst, and other standalone notification daemons with its own built-in notification system. It implements the freedesktop.org notification specification, receives notifications from all applications, displays them as toast popups, and archives them in a persistent notification center with grouping and rich text rendering.
+
+## Notification popups
+
+When an application sends a notification, DMS displays a toast popup in the corner of the screen. Up to four popups can be visible simultaneously; older ones are evicted when the queue is full. Popups auto-dismiss after a configurable timeout (separate timeouts for low, normal, and critical urgency levels).
+
+Critical notifications do not auto-dismiss and always bypass the rate limiter.
+
+## Notification center
+
+The notification center stores all non-transient notifications grouped by application, sorted by urgency and recency.
+
+```bash
+# Toggle the notification center open/closed
+dms ipc call notifications toggle
+
+# Open or close explicitly
+dms ipc call notifications open
+dms ipc call notifications close
+```
+
+### Grouping
+
+Notifications from the same application are collapsed into a single group. Expand a group to see individual messages. Groups can be dismissed all at once.
+
+### Rich text and markdown
+
+Notification bodies support:
+
+- **HTML markup** — bold, italic, links (as sent by the application)
+- **Markdown** — bodies that contain markdown syntax are rendered as formatted text
+- **Image stripping** — inline `<img>` tags are stripped to prevent external tracking
+
+### Persistent history
+
+DMS saves notification history to disk at `~/.cache/DankMaterialShell/notification_history.json`. History survives shell restarts. You can configure:
+
+- Maximum history count
+- Maximum history age in days (older entries are pruned on startup)
+- Whether to save low, normal, and critical urgency notifications
+
+### Notification rules
+
+Per-application rules let you control how specific notifications are handled. Rules match on app name, desktop entry ID, summary, or body using exact match, substring, or regex. Available actions:
+
+| Action | Effect |
+|--------|--------|
+| `ignore` | Silently drops the notification |
+| `mute` | Records in center but suppresses popup |
+| `popup_only` | Shows popup but does not record in center or history |
+| `no_history` | Records in center but not in history |
+
+Rules are configured in **Settings → Notifications → Rules**.
+
+## Do Not Disturb
+
+When Do Not Disturb is active, all notification popups are suppressed and any queued popups are cleared. Notifications are still recorded in the center and history. Toggle DND from the control center or via the status bar indicator.
+
+## Keyboard navigation
+
+Inside the notification center:
+
+- **Arrow keys** to move between groups and individual notifications
+- **Enter** to activate the default notification action
+- **Delete** or **Backspace** to dismiss the focused notification or group
+- **Escape** to close the center
+
+## Replacing your existing notification daemon
+
+DMS acts as the system notification daemon when running. You do not need to start mako, dunst, or any other notification daemon alongside it. If another daemon is already running when DMS starts, DMS will attempt to take over the `org.freedesktop.Notifications` D-Bus name.
+
+<Note>
+  If notifications are not appearing, check that no other notification daemon is configured to auto-start in your compositor or session startup scripts. Run `dms doctor` to diagnose common setup issues.
+</Note>
+
+## Toast notifications for system events
+
+DMS uses its own `ToastService` to display internal notifications for system events — volume changes, brightness adjustments, idle inhibitor state changes, theme switches, and error conditions. These appear as small overlaid toasts separate from the application notification queue.

@@ -1,0 +1,90 @@
+---
+title: "Automatic Application Theming with Matugen"
+description: "How DMS uses matugen to theme GTK, Qt, Alacritty, Kitty, Ghostty, Foot, Wezterm, Neovim, VSCode, and Firefox automatically from your wallpaper color palette."
+---
+
+DankMaterialShell uses [matugen](https://github.com/InioX/matugen) to derive a full Material Design 3 color palette from your wallpaper and propagate those colors to every major application on your system. When you change your wallpaper, DMS regenerates the color tokens and reloads app themes in the background — no manual steps required.
+
+## How the pipeline works
+
+<Steps>
+  <Step title="Wallpaper selection">
+    You set a wallpaper via the settings UI, `dms ipc call wallpaper set`, or directly through `settings.json`. DMS stores the active wallpaper path and passes it to the theming pipeline.
+  </Step>
+  <Step title="Color token generation">
+    `matugen` analyzes the wallpaper image and extracts a harmonious Material Design 3 color scheme. The `matugen_type` value from your active theme controls the extraction algorithm (e.g., `scheme-expressive`, `scheme-tonal-spot`).
+  </Step>
+  <Step title="Template rendering">
+    DMS processes the templates in `quickshell/scripts/templates/` using the generated tokens. Each template produces an app-specific config file (e.g., an Alacritty TOML, a GTK CSS file).
+  </Step>
+  <Step title="Application reload">
+    The generated config files are written to the appropriate locations and apps are signaled to reload where supported.
+  </Step>
+</Steps>
+
+## What gets themed automatically
+
+### GTK and Qt
+
+DMS themes GTK 3, GTK 4, Qt5, and Qt6 applications automatically. This covers the vast majority of Linux desktop apps including file managers, system dialogs, and browser chrome.
+
+### Terminals
+
+<CardGroup cols={2}>
+  <Card title="Alacritty" icon="terminal">
+    GPU-accelerated terminal. Theme written to the Alacritty TOML color config.
+  </Card>
+  <Card title="Kitty" icon="terminal">
+    Feature-rich terminal. Theme applied via Kitty's color configuration.
+  </Card>
+  <Card title="Ghostty" icon="terminal">
+    Modern terminal emulator. Colors injected through Ghostty's config format.
+  </Card>
+  <Card title="Foot" icon="terminal">
+    Lightweight Wayland terminal. Theme applied via foot.ini color section.
+  </Card>
+  <Card title="Wezterm" icon="terminal">
+    Cross-platform terminal. Theme applied through the Wezterm Lua config.
+  </Card>
+</CardGroup>
+
+### Editors
+
+| Editor | Method |
+|--------|--------|
+| Neovim | Color scheme written via the Neovim template |
+| VSCode / VSCodium | Color theme JSON injected into the editor settings |
+
+### Browser
+
+Firefox receives a generated theme through the DMS Firefox template, applying your wallpaper-derived palette to the browser chrome.
+
+## dank16: terminal color scheme generator
+
+In addition to matugen, DMS includes **dank16** — a purpose-built 16-color terminal palette generator that produces ANSI-compatible color schemes from the Material Design 3 tokens. `dank16` themes are applied to terminals that use the standard 16-color ANSI palette.
+
+```bash
+dms dank16 generate
+```
+
+## Templates directory
+
+All templates live in `quickshell/scripts/templates/` inside the DankMaterialShell repository. Each file is a template that matugen renders with the current color tokens. You can inspect or modify these templates to adjust how colors map to specific applications.
+
+## Triggering a retheme manually
+
+DMS automatically rethemes when you change your wallpaper, but you can also trigger the pipeline manually:
+
+```bash
+# Generate new color tokens from the current wallpaper
+dms matugen generate
+
+# Reload application themes from already-generated tokens
+dms matugen reload
+```
+
+Use `generate` when you want to re-derive colors from the wallpaper (e.g., after switching wallpapers via an external tool). Use `reload` when you have changed a template and want to re-render without re-running the color extraction.
+
+## Custom color overrides
+
+The `matugen_type` field in your theme JSON controls the color extraction algorithm. If you want a specific color palette regardless of your wallpaper, use a [custom theme](/configuration/custom-themes) instead. Custom themes define the palette directly and still drive the matugen template rendering, giving you full control over both DMS colors and system app colors.

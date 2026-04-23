@@ -1,0 +1,231 @@
+---
+title: "Creating Custom Color Themes for DankMaterialShell"
+description: "How to define theme JSON files with Material Design 3 colors and load them into DMS, including dark and light variants and live reload."
+---
+
+Custom themes let you define your own Material Design 3 color palette that DankMaterialShell applies across every panel, widget, and overlay. A theme is a plain JSON file you create anywhere on disk, then point DMS at through the settings UI or `settings.json`. The shell reads the file at startup and watches it for changes while it is the active theme.
+
+## Theme JSON structure
+
+A theme file can define separate `dark` and `light` variants, or a single top-level palette used for both modes.
+
+**Dual-variant theme (recommended):**
+
+```json
+{
+  "dark": {
+    "name": "My Theme Dark",
+    "primary": "#00FFCC",
+    ...
+  },
+  "light": {
+    "name": "My Theme Light",
+    "primary": "#00B899",
+    ...
+  }
+}
+```
+
+**Single-variant theme (same palette for dark and light):**
+
+```json
+{
+  "name": "My Theme",
+  "primary": "#eeeeee",
+  ...
+}
+```
+
+## Required core colors
+
+Every theme must include the following color keys. All values are hex color strings (e.g., `"#RRGGBB"`).
+
+<AccordionGroup>
+  <Accordion title="Primary colors">
+    Colors used for buttons, active states, and primary interactive elements.
+
+    | Key | Description |
+    |-----|-------------|
+    | `primary` | Main accent color for buttons, highlights, and active states |
+    | `primaryText` | Text color that contrasts well against a `primary` background |
+    | `primaryContainer` | A darker or lighter variant of `primary` used for containers |
+  </Accordion>
+  <Accordion title="Secondary and tint colors">
+    Supporting accent colors that provide visual hierarchy and variety.
+
+    | Key | Description |
+    |-----|-------------|
+    | `secondary` | Supporting accent color for secondary interactive elements |
+    | `surfaceTint` | Tint color applied to surfaces; usually matches or derives from `primary` |
+  </Accordion>
+  <Accordion title="Surface colors">
+    Colors for cards, panels, and layered UI surfaces.
+
+    | Key | Description |
+    |-----|-------------|
+    | `surface` | Default surface color for cards and panels |
+    | `surfaceText` | Primary text color rendered on `surface` backgrounds |
+    | `surfaceVariant` | Alternate surface color for subtle visual differentiation |
+    | `surfaceVariantText` | Text color for `surfaceVariant` backgrounds |
+    | `surfaceContainer` | Container surface color, slightly different from `surface` |
+    | `surfaceContainerHigh` | Elevated container color for layered interfaces |
+    | `surfaceContainerHighest` | Highest-elevation container color for top-level surfaces |
+  </Accordion>
+  <Accordion title="Background colors">
+    Colors for the overall application backdrop.
+
+    | Key | Description |
+    |-----|-------------|
+    | `background` | Main background color for the entire interface |
+    | `backgroundText` | Text color rendered directly on `background` |
+  </Accordion>
+  <Accordion title="Outline colors">
+    Colors for borders and dividers.
+
+    | Key | Description |
+    |-----|-------------|
+    | `outline` | Border and divider color used for subtle boundaries between elements |
+  </Accordion>
+</AccordionGroup>
+
+## Optional semantic colors
+
+You can also specify these optional keys. If omitted, DMS uses sensible defaults.
+
+```json
+{
+  "error": "#f44336",
+  "warning": "#ff9800",
+  "info": "#2196f3"
+}
+```
+
+| Key | Description |
+|-----|-------------|
+| `error` | Error states, delete buttons, and critical warnings |
+| `warning` | Warning states and caution indicators |
+| `info` | Informational states and neutral indicators |
+
+## Matugen color scheme type
+
+The optional `matugen_type` key controls the algorithm matugen uses when generating color tokens for GTK, terminals, and other apps from your wallpaper. If omitted, `scheme-tonal-spot` is used.
+
+```json
+{
+  "matugen_type": "scheme-expressive"
+}
+```
+
+| Value | Description |
+|-------|-------------|
+| `scheme-content` | Content-based color extraction |
+| `scheme-expressive` | Expressive, vibrant color schemes |
+| `scheme-fidelity` | High fidelity to source material |
+| `scheme-fruit-salad` | Colorful, fruit salad-like schemes |
+| `scheme-monochrome` | Monochromatic color schemes |
+| `scheme-neutral` | Neutral, subdued color schemes |
+| `scheme-rainbow` | Rainbow-like color schemes |
+| `scheme-tonal-spot` | Tonal spot color schemes (default) |
+
+## Complete example: Cyberpunk Electric
+
+The following is the full Cyberpunk Electric theme that ships as an example with DankMaterialShell:
+
+```json
+{
+  "dark": {
+    "name": "Cyberpunk Electric Dark",
+    "primary": "#00FFCC",
+    "primaryText": "#000000",
+    "primaryContainer": "#00CC99",
+    "secondary": "#FF4DFF",
+    "surface": "#0F0F0F",
+    "surfaceText": "#E0FFE0",
+    "surfaceVariant": "#1F2F1F",
+    "surfaceVariantText": "#CCFFCC",
+    "surfaceTint": "#00FFCC",
+    "background": "#000000",
+    "backgroundText": "#F0FFF0",
+    "outline": "#80FF80",
+    "surfaceContainer": "#1A2B1A",
+    "surfaceContainerHigh": "#264026",
+    "surfaceContainerHighest": "#33553F",
+    "error": "#FF0066",
+    "warning": "#CCFF00",
+    "info": "#00FFCC",
+    "matugen_type": "scheme-expressive"
+  },
+  "light": {
+    "name": "Cyberpunk Electric Light",
+    "primary": "#00B899",
+    "primaryText": "#FFFFFF",
+    "primaryContainer": "#66FFDD",
+    "secondary": "#CC00CC",
+    "surface": "#F0FFF0",
+    "surfaceText": "#1F2F1F",
+    "surfaceVariant": "#E6FFE6",
+    "surfaceVariantText": "#2D4D2D",
+    "surfaceTint": "#00B899",
+    "background": "#FFFFFF",
+    "backgroundText": "#000000",
+    "outline": "#4DCC4D",
+    "surfaceContainer": "#F5FFF5",
+    "surfaceContainerHigh": "#EBFFEB",
+    "surfaceContainerHighest": "#E1FFE1",
+    "error": "#B3004D",
+    "warning": "#99CC00",
+    "info": "#00B899",
+    "matugen_type": "scheme-expressive"
+  }
+}
+```
+
+## Loading your theme
+
+<Steps>
+  <Step title="Create your theme file">
+    Save your theme JSON to any location, for example:
+
+    ```
+    ~/.config/DankMaterialShell/themes/mytheme.json
+    ```
+  </Step>
+  <Step title="Select it in settings">
+    Open Settings → **Appearance** → **Theme & Colors**, choose **Custom**, and enter the path to your file. Alternatively, edit `settings.json` directly:
+
+    ```json
+    {
+      "currentThemeName": "custom",
+      "customThemeFile": "/home/user/.config/DankMaterialShell/themes/mytheme.json"
+    }
+    ```
+  </Step>
+  <Step title="Iterate with live reload">
+    With your custom theme active, save any change to the theme file and the shell updates immediately — no restart required.
+  </Step>
+</Steps>
+
+<Note>
+  Live reload only applies when the custom theme is the currently active theme. Edits to other theme files on disk are not automatically applied.
+</Note>
+
+## Example themes to start from
+
+The DankMaterialShell repository includes several ready-to-copy starting points:
+
+<CardGroup cols={2}>
+  <Card title="Cyberpunk Electric" icon="bolt">
+    Neon green and magenta cyberpunk aesthetic.
+  </Card>
+  <Card title="Hotline Miami" icon="fire">
+    Retro 80s inspired hot pink and blue.
+  </Card>
+  <Card title="Miami Vice" icon="sun">
+    Classic teal and pink vice aesthetic.
+  </Card>
+  <Card title="Synthwave Electric" icon="music">
+    Electric purple and cyan synthwave vibes.
+  </Card>
+</CardGroup>
+
+Find these files in the `docs/` directory of the DankMaterialShell repository and copy one as a starting point for your own theme.

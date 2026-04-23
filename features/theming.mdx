@@ -1,0 +1,154 @@
+---
+title: "Dynamic Wallpaper-Based Theming in DankMaterialShell"
+description: "How DMS uses matugen and Material Design 3 to generate a complete color scheme from your wallpaper, automatically theming GTK, Qt, terminals, editors, and more."
+---
+
+DankMaterialShell's theming system generates a full Material Design 3 color palette from your wallpaper using [matugen](https://github.com/InioX/matugen), then applies those colors shell-wide and across supported applications — all in real time. Changing your wallpaper changes your entire desktop's color scheme in one step.
+
+## How wallpaper theming works
+
+<Steps>
+  <Step title="Set a wallpaper">
+    You point DMS at an image file. This can be done via IPC from the command line, via a keybind, or through the wallpaper browser in the UI.
+
+    ```bash
+    dms ipc call wallpaper set /path/to/image.jpg
+    ```
+  </Step>
+  <Step title="matugen extracts colors">
+    DMS passes the image to matugen, which analyzes the dominant hues and generates a harmonious Material Design 3 color token set — primary, secondary, surface, background, outline, and semantic colors (error, warning, info).
+  </Step>
+  <Step title="Color tokens are distributed">
+    The generated tokens are written to configuration files for each supported application and injected into the shell's live theme singleton. The shell reacts immediately; application themes are written to disk for the next launch.
+  </Step>
+  <Step title="Apps pick up the new theme">
+    GTK 3/4 reads the new theme from `~/.config/gtk-3.0/` and `~/.config/gtk-4.0/`. Qt 5/Qt 6 applications follow via the Qt platform theme. Terminal emulators load their new color files. Editors apply the generated theme on restart or via a live reload mechanism.
+  </Step>
+</Steps>
+
+## Setting and cycling wallpapers
+
+### Global wallpaper
+
+```bash
+# Set a wallpaper for all monitors
+dms ipc call wallpaper set /path/to/image.jpg
+
+# Get the current wallpaper path
+dms ipc call wallpaper get
+
+# Cycle to the next or previous image in the same directory
+dms ipc call wallpaper next
+dms ipc call wallpaper prev
+
+# Clear the wallpaper
+dms ipc call wallpaper clear
+```
+
+### Per-monitor wallpapers
+
+Each monitor can have its own wallpaper. Setting a per-monitor wallpaper automatically enables per-monitor mode.
+
+```bash
+# Set different wallpapers per monitor
+dms ipc call wallpaper setFor DP-2 /path/to/image1.jpg
+dms ipc call wallpaper setFor eDP-1 /path/to/image2.jpg
+
+# Get the wallpaper for a specific monitor
+dms ipc call wallpaper getFor DP-2
+
+# Cycle wallpapers per monitor
+dms ipc call wallpaper nextFor eDP-1
+dms ipc call wallpaper prevFor DP-2
+
+# Return to global mode
+dms ipc call wallpaper clear
+```
+
+<Note>
+  When per-monitor mode is active, the global `get` and `set` commands return an error directing you to use the `getFor` and `setFor` variants instead.
+</Note>
+
+## Light and dark mode
+
+The shell supports both light and dark variants of every theme, including wallpaper-generated themes and built-in presets.
+
+```bash
+# Toggle between light and dark
+dms ipc call theme toggle
+
+# Switch explicitly
+dms ipc call theme dark
+dms ipc call theme light
+
+# Query the current mode
+dms ipc call theme getMode
+```
+
+## Applications themed automatically
+
+DMS themes the following applications whenever a new color scheme is applied:
+
+<CardGroup cols={2}>
+  <Card title="GTK 3 and GTK 4" icon="palette">
+    Shell-level GTK theming via generated CSS written to `~/.config/gtk-3.0/` and `~/.config/gtk-4.0/`.
+  </Card>
+  <Card title="Qt 5 and Qt 6" icon="palette">
+    Qt applications follow the system color scheme through the Qt platform theme integration.
+  </Card>
+  <Card title="Terminal emulators" icon="terminal">
+    Alacritty, Kitty, Ghostty, Foot, and Wezterm each receive a generated color file. dank16 handles the 16-color ANSI palette mapping.
+  </Card>
+  <Card title="Editors" icon="code">
+    Neovim, VSCode, and VSCodium receive generated theme files. VSCode and VSCodium themes are applied via the settings JSON.
+  </Card>
+  <Card title="Firefox" icon="globe">
+    A generated `userChrome.css` and color variables file are written for Firefox theming.
+  </Card>
+  <Card title="Shell interface" icon="layout-dashboard">
+    The Quickshell UI itself updates its Material Design 3 color tokens live without a restart.
+  </Card>
+</CardGroup>
+
+## Built-in theme presets
+
+In addition to wallpaper-generated themes, DMS ships with a set of hand-crafted presets you can select from **Settings → Theme & Colors**:
+
+<AccordionGroup>
+  <Accordion title="Available presets">
+    - Nord
+    - Rose Pine
+    - Tokyo Night
+    - Gruvbox
+    - Everforest
+    - Cyberpunk Electric
+    - Hotline Miami
+    - Miami Vice
+    - Synthwave Electric
+  </Accordion>
+  <Accordion title="matugen color scheme types">
+    When using wallpaper-based theming, you can control which matugen algorithm is used. This can be set per theme in the custom theme file:
+
+    | Type | Description |
+    |------|-------------|
+    | `scheme-tonal-spot` | Default — tonal spot colors |
+    | `scheme-content` | Content-based extraction |
+    | `scheme-expressive` | Vibrant, expressive palette |
+    | `scheme-fidelity` | High fidelity to source image |
+    | `scheme-monochrome` | Monochromatic scheme |
+    | `scheme-neutral` | Subdued, neutral colors |
+    | `scheme-rainbow` | Rainbow-like palette |
+    | `scheme-fruit-salad` | Colorful, multi-hue scheme |
+  </Accordion>
+</AccordionGroup>
+
+## Further reading
+
+<CardGroup cols={2}>
+  <Card title="Custom themes" icon="brush" href="/configuration/custom-themes">
+    Create your own Material Design 3 theme files with full color control.
+  </Card>
+  <Card title="Application themes" icon="app-window" href="/configuration/application-themes">
+    Per-application theming details, overrides, and supported editors.
+  </Card>
+</CardGroup>

@@ -1,0 +1,617 @@
+---
+title: "IPC Command Reference for DankMaterialShell"
+description: "Complete reference for all dms ipc call targets: audio, brightness, wallpaper, spotlight, lock, bar, night mode, and Hyprland-specific controls with examples."
+---
+
+DankMaterialShell exposes a Unix socket JSON API that lets external programs control the shell at runtime. The `dms ipc` command is the CLI front-end for this API. Every call follows the same pattern:
+
+```bash
+dms ipc call <target> <function> [parameters...]
+```
+
+`target` is the subsystem you want to control (e.g. `audio`, `wallpaper`, `spotlight`). `function` is the operation to perform. Some functions accept positional parameters after the function name. Most functions return a string confirming the result or reporting the current state; functions marked as returning nothing execute silently.
+
+<Tip>
+  When binding IPC commands to compositor keybinds, use `qs -c dms ipc call ...` instead of `dms ipc call ...` directly. The `qs` wrapper ensures the command reaches the running Quickshell instance correctly.
+</Tip>
+
+---
+
+## System controls
+
+<AccordionGroup>
+  <Accordion title="audio — volume and microphone control">
+    Controls output and input device volume, and reports current audio status.
+
+    | Function | Parameters | Description |
+    |---|---|---|
+    | `setvolume` | `<percentage>` | Set output volume (0–100) |
+    | `increment` | `<step>` | Increase output volume by step |
+    | `decrement` | `<step>` | Decrease output volume by step |
+    | `mute` | — | Toggle output mute state |
+    | `setmic` | `<percentage>` | Set microphone volume (0–100) |
+    | `micmute` | — | Toggle microphone mute state |
+    | `status` | — | Get volume levels and mute states for all devices |
+
+    ```bash
+    dms ipc call audio setvolume 50
+    dms ipc call audio increment 10
+    dms ipc call audio decrement 5
+    dms ipc call audio mute
+    dms ipc call audio setmic 80
+    dms ipc call audio micmute
+    dms ipc call audio status
+    ```
+  </Accordion>
+
+  <Accordion title="brightness — display brightness control">
+    Controls brightness for internal and external displays. The optional `device` parameter accepts a device name (e.g. `intel_backlight`, `DP-2`); pass an empty string `""` to target the default device.
+
+    | Function | Parameters | Description |
+    |---|---|---|
+    | `set` | `<percentage> [device]` | Set brightness to percentage (1–100) |
+    | `increment` | `<step> [device]` | Increase brightness by step |
+    | `decrement` | `<step> [device]` | Decrease brightness by step |
+    | `status` | — | Get current device and brightness level |
+    | `list` | — | List all available brightness devices |
+
+    ```bash
+    dms ipc call brightness set 80
+    dms ipc call brightness increment 10 ""
+    dms ipc call brightness decrement 5 "intel_backlight"
+    dms ipc call brightness status
+    dms ipc call brightness list
+    ```
+  </Accordion>
+
+  <Accordion title="night — night mode / color temperature">
+    Controls night mode (gamma shift / warm color temperature). Supports manual, time-based, and location-based automation.
+
+    | Function | Parameters | Description |
+    |---|---|---|
+    | `toggle` | — | Toggle night mode on/off |
+    | `enable` | — | Enable night mode |
+    | `disable` | — | Disable night mode |
+    | `status` | — | Get current night mode state |
+    | `temperature` | `[value]` | Get or set color temperature in Kelvin (2500–6000, steps of 500) |
+    | `automation` | `[mode]` | Get or set automation mode: `manual`, `time`, or `location` |
+    | `schedule` | `<start> <end>` | Set time-based schedule (HH:MM format, e.g. `20:00 06:00`) |
+    | `location` | `<latitude> <longitude>` | Set coordinates for location-based automation |
+
+    ```bash
+    dms ipc call night toggle
+    dms ipc call night enable
+    dms ipc call night temperature 4000
+    dms ipc call night automation time
+    dms ipc call night schedule 20:00 06:00
+    dms ipc call night location 40.7128 -74.0060
+    ```
+  </Accordion>
+
+  <Accordion title="mpris — media player control">
+    Controls the active MPRIS-compatible media player (Spotify, Firefox, mpv, etc.).
+
+    | Function | Parameters | Description |
+    |---|---|---|
+    | `list` | — | List all available MPRIS players |
+    | `play` | — | Start playback |
+    | `pause` | — | Pause playback |
+    | `playPause` | — | Toggle play/pause |
+    | `previous` | — | Skip to previous track |
+    | `next` | — | Skip to next track |
+    | `stop` | — | Stop playback |
+
+    All playback functions return nothing; they execute the action on the active player.
+
+    ```bash
+    dms ipc call mpris list
+    dms ipc call mpris playPause
+    dms ipc call mpris next
+    dms ipc call mpris previous
+    dms ipc call mpris stop
+    ```
+  </Accordion>
+</AccordionGroup>
+
+---
+
+## Session
+
+<AccordionGroup>
+  <Accordion title="lock — screen lock">
+    Controls the lock screen.
+
+    | Function | Parameters | Description |
+    |---|---|---|
+    | `lock` | — | Lock the screen immediately |
+    | `demo` | — | Show the lock screen in demo mode (does not actually lock) |
+    | `isLocked` | — | Returns the current lock state as a boolean |
+
+    ```bash
+    dms ipc call lock lock
+    dms ipc call lock demo
+    dms ipc call lock isLocked
+    ```
+  </Accordion>
+
+  <Accordion title="inhibit — idle inhibitor">
+    Prevents the system from sleeping or auto-locking. Useful when watching a video or running a presentation.
+
+    | Function | Parameters | Description |
+    |---|---|---|
+    | `toggle` | — | Toggle idle inhibit state |
+    | `enable` | — | Enable idle inhibit (prevent sleep/lock) |
+    | `disable` | — | Disable idle inhibit (allow sleep/lock) |
+
+    ```bash
+    dms ipc call inhibit toggle
+    dms ipc call inhibit enable
+    dms ipc call inhibit disable
+    ```
+  </Accordion>
+</AccordionGroup>
+
+---
+
+## Wallpaper
+
+<AccordionGroup>
+  <Accordion title="wallpaper — wallpaper management">
+    Manages the desktop wallpaper. Supports a global wallpaper mode and a per-monitor mode. When per-monitor mode is active, the legacy global functions (`get`, `set`, `next`, `prev`) return an error directing you to use the per-monitor equivalents.
+
+    **Global wallpaper functions:**
+
+    | Function | Parameters | Description |
+    |---|---|---|
+    | `get` | — | Get the current global wallpaper path |
+    | `set` | `<path>` | Set the global wallpaper to an image file |
+    | `clear` | — | Clear all wallpapers and disable per-monitor mode |
+    | `next` | — | Cycle to the next wallpaper in the same directory |
+    | `prev` | — | Cycle to the previous wallpaper in the same directory |
+
+    **Per-monitor wallpaper functions:**
+
+    | Function | Parameters | Description |
+    |---|---|---|
+    | `getFor` | `<screenName>` | Get wallpaper path for a specific monitor |
+    | `setFor` | `<screenName> <path>` | Set wallpaper for a specific monitor (enables per-monitor mode) |
+    | `nextFor` | `<screenName>` | Cycle to next wallpaper for a specific monitor |
+    | `prevFor` | `<screenName>` | Cycle to previous wallpaper for a specific monitor |
+
+    `screenName` is the monitor identifier as reported by your compositor (e.g. `eDP-1`, `DP-2`, `HDMI-A-1`).
+
+    <Tabs>
+      <Tab title="Global mode">
+        ```bash
+        dms ipc call wallpaper get
+        dms ipc call wallpaper set /path/to/image.jpg
+        dms ipc call wallpaper next
+        dms ipc call wallpaper prev
+        dms ipc call wallpaper clear
+        ```
+      </Tab>
+      <Tab title="Per-monitor mode">
+        ```bash
+        # Set different wallpapers for each monitor
+        dms ipc call wallpaper setFor DP-2 /path/to/image1.jpg
+        dms ipc call wallpaper setFor eDP-1 /path/to/image2.jpg
+
+        # Get wallpaper for a specific monitor
+        dms ipc call wallpaper getFor DP-2
+
+        # Cycle wallpapers per monitor
+        dms ipc call wallpaper nextFor eDP-1
+        dms ipc call wallpaper prevFor DP-2
+
+        # Return to global mode
+        dms ipc call wallpaper clear
+        ```
+      </Tab>
+    </Tabs>
+
+    <Note>
+      When per-monitor mode is active, `get` returns `ERROR: Per-monitor mode enabled. Use getFor(screenName) instead.` Use `clear` to return to global mode.
+    </Note>
+  </Accordion>
+</AccordionGroup>
+
+---
+
+## Profile
+
+<AccordionGroup>
+  <Accordion title="profile — user profile image">
+    Manages the user profile image displayed in the shell UI.
+
+    | Function | Parameters | Description |
+    |---|---|---|
+    | `getImage` | — | Get the current profile image path (empty string if not set) |
+    | `setImage` | `<path>` | Set the profile image to an image file |
+    | `clearImage` | — | Remove the profile image |
+
+    ```bash
+    dms ipc call profile getImage
+    dms ipc call profile setImage /path/to/avatar.png
+    dms ipc call profile clearImage
+    ```
+  </Accordion>
+</AccordionGroup>
+
+---
+
+## Theme
+
+<AccordionGroup>
+  <Accordion title="theme — light/dark mode">
+    Switches between light and dark theme modes.
+
+    | Function | Parameters | Description |
+    |---|---|---|
+    | `toggle` | — | Toggle between light and dark |
+    | `light` | — | Switch to light mode |
+    | `dark` | — | Switch to dark mode |
+    | `getMode` | — | Returns `"light"` or `"dark"` |
+
+    ```bash
+    dms ipc call theme toggle
+    dms ipc call theme dark
+    dms ipc call theme light
+    dms ipc call theme getMode
+    ```
+  </Accordion>
+</AccordionGroup>
+
+---
+
+## UI controls
+
+### Bar
+
+<AccordionGroup>
+  <Accordion title="bar — top bar visibility">
+    Shows, hides, or queries the top status bar.
+
+    | Function | Parameters | Description |
+    |---|---|---|
+    | `reveal` | — | Show the top bar |
+    | `hide` | — | Hide the top bar |
+    | `toggle` | — | Toggle top bar visibility |
+    | `status` | — | Returns `"visible"` or `"hidden"` |
+
+    ```bash
+    dms ipc call bar reveal
+    dms ipc call bar hide
+    dms ipc call bar toggle
+    dms ipc call bar status
+    ```
+  </Accordion>
+</AccordionGroup>
+
+### Modals and overlays
+
+<AccordionGroup>
+  <Accordion title="spotlight — application launcher">
+    Controls the spotlight-style application launcher modal.
+
+    | Function | Parameters | Description |
+    |---|---|---|
+    | `open` | — | Show the launcher |
+    | `close` | — | Hide the launcher |
+    | `toggle` | — | Toggle launcher visibility |
+    | `openQuery` | `<query>` | Show the launcher with a pre-filled search query |
+    | `toggleQuery` | `<query>` | Toggle launcher with a pre-filled query (query only used when opening) |
+
+    ```bash
+    dms ipc call spotlight toggle
+    dms ipc call spotlight openQuery browser
+    dms ipc call spotlight toggleQuery "!"
+    ```
+  </Accordion>
+
+  <Accordion title="clipboard — clipboard history">
+    Controls the clipboard history modal.
+
+    | Function | Parameters | Description |
+    |---|---|---|
+    | `open` | — | Show clipboard history |
+    | `close` | — | Hide clipboard history |
+    | `toggle` | — | Toggle clipboard history visibility |
+
+    ```bash
+    dms ipc call clipboard open
+    dms ipc call clipboard toggle
+    dms ipc call clipboard close
+    ```
+  </Accordion>
+
+  <Accordion title="notifications — notification center">
+    Controls the notification center modal.
+
+    | Function | Parameters | Description |
+    |---|---|---|
+    | `open` | — | Show notification center |
+    | `close` | — | Hide notification center |
+    | `toggle` | — | Toggle notification center visibility |
+
+    ```bash
+    dms ipc call notifications toggle
+    dms ipc call notifications open
+    dms ipc call notifications close
+    ```
+  </Accordion>
+
+  <Accordion title="settings — settings modal">
+    Controls the settings modal.
+
+    | Function | Parameters | Description |
+    |---|---|---|
+    | `open` | — | Show settings |
+    | `close` | — | Hide settings |
+    | `toggle` | — | Toggle settings visibility |
+
+    ```bash
+    dms ipc call settings open
+    dms ipc call settings toggle
+    ```
+  </Accordion>
+
+  <Accordion title="processlist — system process monitor">
+    Controls the process list and system performance modal.
+
+    | Function | Parameters | Description |
+    |---|---|---|
+    | `open` | — | Show process list |
+    | `close` | — | Hide process list |
+    | `toggle` | — | Toggle process list visibility |
+
+    ```bash
+    dms ipc call processlist toggle
+    ```
+  </Accordion>
+
+  <Accordion title="powermenu — power menu">
+    Controls the power menu modal for shutdown, reboot, suspend, and logout actions.
+
+    | Function | Parameters | Description |
+    |---|---|---|
+    | `open` | — | Show power menu |
+    | `close` | — | Hide power menu |
+    | `toggle` | — | Toggle power menu visibility |
+
+    ```bash
+    dms ipc call powermenu toggle
+    dms ipc call powermenu open
+    ```
+  </Accordion>
+
+  <Accordion title="control-center — control center panel">
+    Controls the control center popout, which contains quick settings for network, Bluetooth, audio, display, and night mode.
+
+    | Function | Parameters | Description |
+    |---|---|---|
+    | `open` | — | Show control center |
+    | `close` | — | Hide control center |
+    | `toggle` | — | Toggle control center visibility |
+
+    ```bash
+    dms ipc call control-center toggle
+    dms ipc call control-center open
+    dms ipc call control-center close
+    ```
+  </Accordion>
+
+  <Accordion title="notepad — notepad / scratchpad">
+    Controls the notepad scratchpad modal with support for expanding and collapsing the panel width.
+
+    | Function | Parameters | Description |
+    |---|---|---|
+    | `open` | — | Show notepad |
+    | `close` | — | Hide notepad |
+    | `toggle` | — | Toggle notepad visibility |
+    | `expand` | — | Expand to full width and open if hidden |
+    | `collapse` | — | Collapse width without changing visibility |
+    | `toggleExpand` | — | Toggle between collapsed and expanded width |
+
+    ```bash
+    dms ipc call notepad toggle
+    dms ipc call notepad expand
+    dms ipc call notepad collapse
+    dms ipc call notepad toggleExpand
+    ```
+  </Accordion>
+
+  <Accordion title="dash — dashboard popup">
+    Controls the dashboard popup with tab selection for overview, media, and weather.
+
+    | Function | Parameters | Description |
+    |---|---|---|
+    | `open` | `[tab]` | Show dashboard, optionally opening a specific tab |
+    | `close` | — | Hide dashboard |
+    | `toggle` | `[tab]` | Toggle dashboard, optionally opening a specific tab when showing |
+
+    Valid tab names: `overview`, `media`, `weather` (or empty string for default).
+
+    ```bash
+    dms ipc call dash open overview
+    dms ipc call dash toggle media
+    dms ipc call dash open weather
+    dms ipc call dash close
+    ```
+  </Accordion>
+
+  <Accordion title="dankdash — DankDash wallpaper browser">
+    Controls the DankDash popup on the focused screen with the wallpaper tab pre-selected.
+
+    | Function | Parameters | Description |
+    |---|---|---|
+    | `wallpaper` | — | Toggle DankDash with the wallpaper tab selected |
+
+    ```bash
+    dms ipc call dankdash wallpaper
+    ```
+  </Accordion>
+
+  <Accordion title="file — file browser">
+    Opens a native file browser for selecting wallpapers or profile images. Both browsers open in the Pictures directory and filter to common image formats (jpg, jpeg, png, bmp, gif, webp).
+
+    | Function | Parameters | Description |
+    |---|---|---|
+    | `browse` | `<type>` | Open a file browser; `type` is `wallpaper` or `profile` |
+
+    ```bash
+    dms ipc call file browse wallpaper
+    dms ipc call file browse profile
+    ```
+  </Accordion>
+
+  <Accordion title="color-picker — color picker modal">
+    Controls the color picker modal. The `Instant` variants skip the hide animation.
+
+    | Function | Parameters | Description |
+    |---|---|---|
+    | `open` | — | Show color picker |
+    | `openColor` | `<color>` | Show color picker with a pre-selected color (e.g. `#ff0000`) |
+    | `close` | — | Hide color picker |
+    | `closeInstant` | — | Hide color picker without animation |
+    | `toggle` | — | Toggle color picker visibility |
+    | `toggleInstant` | — | Toggle color picker; hides without animation |
+
+    ```bash
+    dms ipc call color-picker toggle
+    dms ipc call color-picker openColor "#3f51b5"
+    dms ipc call color-picker closeInstant
+    ```
+  </Accordion>
+
+  <Accordion title="systemupdater — system update check">
+    Triggers an external system update status check in the shell UI.
+
+    | Function | Parameters | Description |
+    |---|---|---|
+    | `updatestatus` | — | Request a system update check |
+
+    ```bash
+    dms ipc call systemupdater updatestatus
+    ```
+  </Accordion>
+</AccordionGroup>
+
+---
+
+## Hyprland-specific controls
+
+<AccordionGroup>
+  <Accordion title="hypr — keybinds cheatsheet and workspace overview">
+    Hyprland-only controls for the keybinds cheatsheet and the live workspace overview. All functions return `HYPR_NOT_AVAILABLE` if DMS is not running under Hyprland.
+
+    | Function | Parameters | Description |
+    |---|---|---|
+    | `openBinds` | — | Show the keybinds cheatsheet modal |
+    | `closeBinds` | — | Hide the keybinds cheatsheet modal |
+    | `toggleBinds` | — | Toggle keybinds cheatsheet visibility |
+    | `openOverview` | — | Show the workspace overview |
+    | `closeOverview` | — | Hide the workspace overview |
+    | `toggleOverview` | — | Toggle workspace overview visibility |
+
+    ```bash
+    dms ipc call hypr toggleBinds
+    dms ipc call hypr openOverview
+    dms ipc call hypr closeOverview
+    dms ipc call hypr toggleOverview
+    ```
+
+    **Keybinds cheatsheet** parses all binds from `~/.config/hypr` and auto-categorizes them into three columns:
+    - **Window / Monitor** — window and monitor management (sorted by dispatcher)
+    - **Workspace** — workspace switching and management (sorted by dispatcher)
+    - **Execute** — application launchers and exec commands (sorted by keybind)
+
+    **Workspace overview** shows a live preview of all workspaces across all monitors with real-time screen captures. Features include:
+    - Multi-monitor support with monitor name labels
+    - Drag-and-drop to move windows between workspaces and monitors
+    - Left/Right arrow keys to navigate workspaces on the current monitor
+    - Click any workspace to switch to it
+    - Click outside or press Escape to close
+
+    <Warning>
+      These functions only work when DMS is running under Hyprland. On other compositors they return `HYPR_NOT_AVAILABLE`.
+    </Warning>
+  </Accordion>
+</AccordionGroup>
+
+---
+
+## Usage patterns
+
+### Keybinding integration
+
+IPC commands are designed to be driven by compositor keybinds. Use `qs -c dms ipc call` in the bind definition so the command is routed through the Quickshell socket.
+
+<Tabs>
+  <Tab title="niri">
+    ```kdl
+    binds {
+        Mod+Space { spawn "qs" "-c" "dms" "ipc" "call" "spotlight" "toggle"; }
+        Mod+V     { spawn "qs" "-c" "dms" "ipc" "call" "clipboard" "toggle"; }
+        Mod+P     { spawn "qs" "-c" "dms" "ipc" "call" "notepad" "toggle"; }
+        Mod+Shift+P { spawn "qs" "-c" "dms" "ipc" "call" "notepad" "expand"; }
+        Mod+Ctrl+P  { spawn "qs" "-c" "dms" "ipc" "call" "notepad" "toggleExpand"; }
+        Mod+X     { spawn "qs" "-c" "dms" "ipc" "call" "powermenu" "toggle"; }
+        XF86AudioRaiseVolume   { spawn "qs" "-c" "dms" "ipc" "call" "audio" "increment" "3"; }
+        XF86MonBrightnessUp    { spawn "qs" "-c" "dms" "ipc" "call" "brightness" "increment" "5" ""; }
+    }
+    ```
+  </Tab>
+  <Tab title="Hyprland">
+    ```conf
+    bind = SUPER, Space, exec, qs -c dms ipc call spotlight toggle
+    bind = SUPER, V, exec, qs -c dms ipc call clipboard toggle
+    bind = SUPER, P, exec, qs -c dms ipc call notepad toggle
+    bind = SUPER SHIFT, P, exec, qs -c dms ipc call notepad expand
+    bind = SUPER CTRL, P, exec, qs -c dms ipc call notepad toggleExpand
+    bind = SUPER, X, exec, qs -c dms ipc call powermenu toggle
+    bind = SUPER, slash, exec, qs -c dms ipc call hypr toggleBinds
+    bind = SUPER, Tab, exec, qs -c dms ipc call hypr toggleOverview
+    bind = , XF86AudioRaiseVolume, exec, qs -c dms ipc call audio increment 3
+    bind = , XF86MonBrightnessUp, exec, qs -c dms ipc call brightness increment 5 ""
+    ```
+  </Tab>
+</Tabs>
+
+### Status checking
+
+Query functions return string output you can inspect in shell conditionals:
+
+```bash
+# Perform an action only when the screen is unlocked
+if dms ipc call lock isLocked | grep -q "false"; then
+    dms ipc call notifications open
+fi
+```
+
+### Time-based automation
+
+Combine IPC calls with cron or systemd timers for automatic state changes:
+
+```bash
+#!/bin/bash
+# Toggle night mode based on time of day
+hour=$(date +%H)
+if [ $hour -ge 20 ] || [ $hour -le 6 ]; then
+    dms ipc call night enable
+else
+    dms ipc call night disable
+fi
+```
+
+Or use the built-in automation instead of an external script:
+
+```bash
+dms ipc call night automation time
+dms ipc call night schedule 20:00 06:00
+```
+
+---
+
+## Return values
+
+Most IPC functions return a plain string indicating success, current state, or an error. Functions that control media playback (`mpris play`, `mpris pause`, etc.) return nothing — they execute the action without feedback. For those, check application state through other means if needed.

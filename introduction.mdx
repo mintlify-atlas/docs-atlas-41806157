@@ -1,0 +1,79 @@
+---
+title: "DankMaterialShell: A Complete Wayland Desktop Shell"
+description: "DankMaterialShell replaces waybar, swaylock, mako, fuzzel, and polkit with a unified shell for Niri, Hyprland, Sway, MangoWC, labwc, and other compositors."
+---
+
+DankMaterialShell (DMS) is a complete desktop shell for Wayland — not a status bar, widget toolkit, or collection of loosely connected tools. It replaces the patchwork of utilities most Wayland users assemble by hand (waybar, swaylock, swayidle, mako, fuzzel, polkit) with a single, cohesive system built on [Quickshell](https://quickshell.org/) (QML) for the interface layer and Go for the backend and CLI. The result is a shell where every component — theming, notifications, session management, and the application launcher — shares state and behaves as one.
+
+## What DankMaterialShell includes
+
+DMS replaces the following tools entirely:
+
+| Replaced tool | DMS equivalent |
+|---|---|
+| waybar | DankBar with workspace switching, indicators, and plugin slots |
+| swaylock / swayidle | Session management with idle detection and auto-suspend |
+| mako / dunst | Smart notification center with grouping and keyboard navigation |
+| fuzzel / rofi | Spotlight-style launcher with file search, emoji, and calculator |
+| polkit | Built-in polkit agent |
+
+## Architecture
+
+DMS is built in two layers:
+
+- **QML shell** (`quickshell/`) — the visual interface: panels, overlays, widgets, and UI components, rendered via Quickshell
+- **Go backend** (`core/`) — system integration, IPC, hardware control (brightness, clipboard, audio), and the `dms` CLI and `dankinstall` installer
+
+Communication between layers happens over a Unix socket JSON API. The `dms ipc call` command exposes this API to compositor keybinds and scripts.
+
+## Supported compositors
+
+DMS runs on any Wayland compositor via standard protocols, with deeper integration available for specific compositors:
+
+- **Niri** — full workspace switching, IPC
+- **Hyprland** — workspace overview with drag-and-drop, keybinds cheatsheet, IPC
+- **Sway** — full workspace switching, IPC
+- **MangoWC** — tag-based workspaces via dwl-ipc
+- **labwc** — full workspace switching, IPC
+- **Scroll** — full workspace switching, IPC
+- **Miracle WM** — full workspace switching, IPC
+
+See the [compositor setup guide](/compositors) for per-compositor configuration.
+
+## Key features
+
+<CardGroup cols={2}>
+  <Card title="Dynamic theming" icon="palette" href="/features/theming">
+    Wallpaper-based Material Design 3 color schemes that automatically theme GTK, Qt, terminals, and editors including VS Code and VSCodium
+  </Card>
+  <Card title="Bar and widgets" icon="grip" href="/features/bar-and-widgets">
+    Fully customizable DankBar with workspace indicators, system tray, media controls, and plugin slots
+  </Card>
+  <Card title="Spotlight launcher" icon="magnifying-glass" href="/features/launcher">
+    Search apps, files, emojis, running windows, and run calculator expressions from one keyboard shortcut
+  </Card>
+  <Card title="Control center" icon="sliders" href="/features/control-center">
+    Unified panel for network, Bluetooth, audio devices, display brightness, and night mode
+  </Card>
+  <Card title="Smart notifications" icon="bell" href="/features/notifications">
+    Notification center with grouping, rich text support, and full keyboard navigation
+  </Card>
+  <Card title="Session management" icon="lock" href="/features/session-management">
+    Lock screen, idle detection, and auto-suspend with separate AC and battery profiles, plus greeter support
+  </Card>
+</CardGroup>
+
+<Note>
+  DMS installs in one command on Arch, Fedora, Debian, Ubuntu, openSUSE, and Gentoo — including all dependencies and compositor configuration:
+
+  ```bash
+  curl -fsSL https://install.danklinux.com | sh
+  ```
+
+  See the [installation guide](/installation) for options including headless/unattended installs.
+</Note>
+
+## Next steps
+
+- [Install DankMaterialShell](/installation) — interactive installer, per-distro packages, and build from source
+- [Configure your compositor](/compositors) — keybinds and workspace integration for each supported compositor

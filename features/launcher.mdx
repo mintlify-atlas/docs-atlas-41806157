@@ -1,0 +1,100 @@
+---
+title: "Spotlight Launcher: Search Apps, Files, and More"
+description: "The DMS Spotlight launcher searches apps, files, emojis, windows, and calculator expressions from one shortcut, extensible with trigger-based launcher plugins."
+---
+
+The DankMaterialShell Spotlight launcher provides a unified, keyboard-driven search interface that surfaces applications, files, emojis, running windows, calculator results, and shell commands from a single input field. It opens instantly and closes when you press Escape or make a selection. The launcher is extensible with plugins that respond to trigger strings.
+
+## Opening the launcher
+
+```bash
+# Toggle the launcher open/closed
+dms ipc call spotlight toggle
+
+# Open only (no-op if already open)
+dms ipc call spotlight open
+
+# Close only
+dms ipc call spotlight close
+```
+
+### Pre-filled search
+
+You can open the launcher with a query already typed in — useful for keybinds that target a specific category:
+
+```bash
+# Open with "browser" pre-filled
+dms ipc call spotlight openQuery browser
+
+# Toggle with a trigger string pre-filled
+dms ipc call spotlight toggleQuery "!"
+```
+
+### Compositor keybind examples
+
+<Tabs>
+  <Tab title="Hyprland">
+    ```conf
+    bind = SUPER, Space, exec, qs -c dms ipc call spotlight toggle
+    ```
+  </Tab>
+  <Tab title="niri">
+    ```kdl
+    binds {
+        Mod+Space { spawn "qs" "-c" "dms" "ipc" "call" "spotlight" "toggle"; }
+    }
+    ```
+  </Tab>
+</Tabs>
+
+## What the launcher can search
+
+<CardGroup cols={2}>
+  <Card title="Applications" icon="app-window">
+    Searches installed `.desktop` entries. Results show the app icon, name, and description. Press Enter to launch.
+  </Card>
+  <Card title="Files" icon="folder-search">
+    File search powered by [dsearch](https://github.com/AvengeMedia/danksearch). Results include file paths and types with fast indexed lookup.
+  </Card>
+  <Card title="Running windows" icon="layout-dashboard">
+    Lists open windows across all workspaces. Selecting a result focuses that window.
+  </Card>
+  <Card title="Emojis" icon="smile">
+    Search the full Unicode emoji set by name or keyword. Selecting an emoji copies it to the clipboard.
+  </Card>
+  <Card title="Calculator" icon="calculator">
+    Evaluates math expressions entered directly in the search field and shows the result inline.
+  </Card>
+  <Card title="Commands" icon="terminal">
+    Run arbitrary shell commands. Useful for one-off actions without leaving the keyboard.
+  </Card>
+</CardGroup>
+
+<Note>
+  File search requires [dsearch](https://github.com/AvengeMedia/danksearch) to be installed. If dsearch is not present, the file search category is hidden automatically. Run `dms doctor` to check for missing dependencies.
+</Note>
+
+## Keyboard navigation
+
+- **Type** to filter results
+- **Arrow keys** or **Tab / Shift+Tab** to move through results
+- **Enter** to activate the selected result
+- **Escape** to close without selecting
+
+## Plugin-extensible search
+
+The launcher supports plugin-provided search providers. Each plugin registers a trigger string — a prefix that activates its category when typed at the start of the search field.
+
+| Trigger | Example | Description |
+|---------|---------|-------------|
+| `!` | `! my search` | Plugin-defined (example: web search) |
+| `#` | `# tag` | Plugin-defined (example: notes) |
+| `@` | `@ contact` | Plugin-defined (example: contacts) |
+
+Trigger strings and their behavior depend on which launcher plugins are installed.
+
+<CardGroup cols={1}>
+  <Card title="Launcher plugins" icon="puzzle" href="/plugins/launcher-plugins">
+    Learn how to install and build plugins that add new search categories and trigger strings to the launcher.
+  </Card>
+</CardGroup>

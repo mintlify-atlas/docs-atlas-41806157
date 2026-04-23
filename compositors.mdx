@@ -1,0 +1,173 @@
+---
+title: "Compositor Configuration for DankMaterialShell"
+description: "Configure keybinds and workspace integration for DankMaterialShell on Niri, Hyprland, Sway, MangoWC, labwc, Scroll, and Miracle WM with real config examples."
+---
+
+DMS runs on any Wayland compositor via standard protocols, but the depth of integration varies. Niri and Hyprland have the richest support — including workspace overview, drag-and-drop window management, and compositor-specific IPC. Sway, labwc, Scroll, and Miracle WM support full workspace switching and IPC. MangoWC uses a tag-based model via dwl-ipc.
+
+All DMS features are controlled through the `qs -c dms ipc call` interface. Add these commands to your compositor's keybind configuration to launch the launcher, toggle the clipboard history, control media, and more.
+
+## Feature comparison
+
+| Compositor | Workspaces | Overview | IPC protocol |
+|---|---|---|---|
+| Niri | Full | Yes | Niri socket |
+| Hyprland | Full | Yes (drag-and-drop) | Hyprland socket |
+| Sway | Full | — | i3/Sway IPC |
+| MangoWC | Tags | — | dwl-ipc-unstable-v2 |
+| labwc | Full | — | Wayland protocols |
+| Scroll | Full | — | Wayland protocols |
+| Miracle WM | Full | — | Wayland protocols |
+
+## Compositor setup
+
+<Tabs>
+  <Tab title="Niri">
+    Add the following binds to your Niri configuration (`~/.config/niri/config.kdl`):
+
+    ```kdl
+    binds {
+        Mod+Space { spawn "qs" "-c" "dms" "ipc" "call" "spotlight" "toggle"; }
+        Mod+V { spawn "qs" "-c" "dms" "ipc" "call" "clipboard" "toggle"; }
+        Mod+P { spawn "qs" "-c" "dms" "ipc" "call" "notepad" "toggle"; }
+        Mod+X { spawn "qs" "-c" "dms" "ipc" "call" "powermenu" "toggle"; }
+        XF86AudioRaiseVolume { spawn "qs" "-c" "dms" "ipc" "call" "audio" "increment" "3"; }
+        XF86AudioLowerVolume { spawn "qs" "-c" "dms" "ipc" "call" "audio" "increment" "-3"; }
+        XF86MonBrightnessUp { spawn "qs" "-c" "dms" "ipc" "call" "brightness" "increment" "5" ""; }
+        XF86MonBrightnessDown { spawn "qs" "-c" "dms" "ipc" "call" "brightness" "increment" "-5" ""; }
+    }
+    ```
+
+    Niri supports full workspace switching and the workspace overview panel. `dankinstall` writes this configuration automatically when you select Niri during setup.
+  </Tab>
+  <Tab title="Hyprland">
+    Add the following to your Hyprland configuration (`~/.config/hypr/hyprland.conf`):
+
+    ```conf
+    bind = SUPER, Space, exec, qs -c dms ipc call spotlight toggle
+    bind = SUPER, V, exec, qs -c dms ipc call clipboard toggle
+    bind = SUPER, X, exec, qs -c dms ipc call powermenu toggle
+    bind = SUPER, slash, exec, qs -c dms ipc call hypr toggleBinds
+    bind = SUPER, Tab, exec, qs -c dms ipc call hypr toggleOverview
+    bind = , XF86AudioRaiseVolume, exec, qs -c dms ipc call audio increment 3
+    bind = , XF86AudioLowerVolume, exec, qs -c dms ipc call audio increment -3
+    bind = , XF86MonBrightnessUp, exec, qs -c dms ipc call brightness increment 5 ""
+    bind = , XF86MonBrightnessDown, exec, qs -c dms ipc call brightness increment -5 ""
+    ```
+
+    Hyprland unlocks two features not available on other compositors:
+
+    - **Workspace overview** (`hypr toggleOverview`) — a bird's-eye view of all workspaces with drag-and-drop window rearrangement
+    - **Keybinds cheatsheet** (`hypr toggleBinds`) — an overlay listing all active Hyprland keybinds pulled from your config
+
+    `dankinstall` writes this configuration automatically when you select Hyprland during setup.
+  </Tab>
+  <Tab title="Sway">
+    Add the following to your Sway configuration (`~/.config/sway/config`):
+
+    ```conf
+    bindsym $mod+Space exec qs -c dms ipc call spotlight toggle
+    bindsym $mod+v exec qs -c dms ipc call clipboard toggle
+    bindsym $mod+x exec qs -c dms ipc call powermenu toggle
+    bindsym XF86AudioRaiseVolume exec qs -c dms ipc call audio increment 3
+    bindsym XF86AudioLowerVolume exec qs -c dms ipc call audio increment -3
+    bindsym XF86MonBrightnessUp exec qs -c dms ipc call brightness increment 5 ""
+    bindsym XF86MonBrightnessDown exec qs -c dms ipc call brightness increment -5 ""
+    ```
+
+    Sway has full workspace switching and IPC integration. The workspace overview is not available on Sway.
+  </Tab>
+  <Tab title="MangoWC">
+    MangoWC uses a tag-based workspace model (similar to dwm/dwl) and communicates via the `dwl-ipc-unstable-v2` protocol. Add DMS IPC calls to your MangoWC keybind configuration:
+
+    ```conf
+    bind = SUPER, Space, exec, qs -c dms ipc call spotlight toggle
+    bind = SUPER, V, exec, qs -c dms ipc call clipboard toggle
+    bind = SUPER, X, exec, qs -c dms ipc call powermenu toggle
+    bind = , XF86AudioRaiseVolume, exec, qs -c dms ipc call audio increment 3
+    bind = , XF86MonBrightnessUp, exec, qs -c dms ipc call brightness increment 5 ""
+    ```
+
+    <Note>
+      MangoWC uses tags rather than numbered workspaces. The DMS bar reflects this with tag indicators instead of workspace numbers. Workspace overview is not available on MangoWC.
+    </Note>
+  </Tab>
+  <Tab title="labwc">
+    Add the following actions to your labwc keybind configuration (`~/.config/labwc/rc.xml`):
+
+    ```xml
+    <keybind key="W-space">
+      <action name="Execute">
+        <command>qs -c dms ipc call spotlight toggle</command>
+      </action>
+    </keybind>
+    <keybind key="W-v">
+      <action name="Execute">
+        <command>qs -c dms ipc call clipboard toggle</command>
+      </action>
+    </keybind>
+    <keybind key="W-x">
+      <action name="Execute">
+        <command>qs -c dms ipc call powermenu toggle</command>
+      </action>
+    </keybind>
+    ```
+
+    labwc supports full workspace switching via standard Wayland protocols. Workspace overview is not available on labwc.
+  </Tab>
+  <Tab title="Scroll">
+    Scroll is a scrolling window manager. Add DMS keybinds to your Scroll configuration:
+
+    ```conf
+    bind = SUPER, Space, exec, qs -c dms ipc call spotlight toggle
+    bind = SUPER, V, exec, qs -c dms ipc call clipboard toggle
+    bind = SUPER, X, exec, qs -c dms ipc call powermenu toggle
+    bind = , XF86AudioRaiseVolume, exec, qs -c dms ipc call audio increment 3
+    bind = , XF86MonBrightnessUp, exec, qs -c dms ipc call brightness increment 5 ""
+    ```
+
+    <Note>
+      Scroll has full workspace switching support. Workspace overview is not available on Scroll.
+    </Note>
+  </Tab>
+  <Tab title="Miracle WM">
+    Add DMS IPC commands to your Miracle WM keybind configuration:
+
+    ```conf
+    bind = SUPER, Space, exec, qs -c dms ipc call spotlight toggle
+    bind = SUPER, V, exec, qs -c dms ipc call clipboard toggle
+    bind = SUPER, X, exec, qs -c dms ipc call powermenu toggle
+    bind = , XF86AudioRaiseVolume, exec, qs -c dms ipc call audio increment 3
+    bind = , XF86MonBrightnessUp, exec, qs -c dms ipc call brightness increment 5 ""
+    ```
+
+    <Note>
+      Miracle WM has full workspace switching support. Workspace overview is not available on Miracle WM.
+    </Note>
+  </Tab>
+</Tabs>
+
+## IPC reference
+
+All DMS UI panels and system controls are accessible via IPC. The full list of callable endpoints is documented in the [IPC reference](/cli/ipc-reference).
+
+Common calls used in keybinds:
+
+| Command | Effect |
+|---|---|
+| `qs -c dms ipc call spotlight toggle` | Open or close the application launcher |
+| `qs -c dms ipc call clipboard toggle` | Open or close clipboard history |
+| `qs -c dms ipc call notepad toggle` | Open or close the quick notepad |
+| `qs -c dms ipc call powermenu toggle` | Open or close the power/session menu |
+| `qs -c dms ipc call audio increment <n>` | Adjust volume by `n` percent |
+| `qs -c dms ipc call brightness increment <n> ""` | Adjust brightness by `n` percent |
+
+You can also invoke IPC from the `dms` CLI directly:
+
+```bash
+dms ipc call spotlight toggle
+dms ipc call audio setvolume 50
+dms ipc call wallpaper set ~/Pictures/my-wallpaper.jpg
+```
+
+See the [CLI overview](/cli/overview) for the full list of `dms` commands.

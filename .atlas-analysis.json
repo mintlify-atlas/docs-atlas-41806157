@@ -1,0 +1,107 @@
+{
+  "projectType": "general",
+  "projectName": "DankMaterialShell",
+  "projectDescription": "A complete Material Design desktop shell for Wayland compositors, built with Quickshell and Go, featuring dynamic theming, a plugin system, and support for Niri, Hyprland, Sway, and more.",
+  "theme": "willow",
+  "primaryColor": "#cdbdfc",
+  "lightColor": "#6c44c4",
+  "darkColor": null,
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Get Started",
+            "pages": [
+              "introduction",
+              "installation",
+              "compositors"
+            ]
+          },
+          {
+            "group": "Features",
+            "pages": [
+              "features/theming",
+              "features/bar-and-widgets",
+              "features/launcher",
+              "features/control-center",
+              "features/notifications",
+              "features/session-management"
+            ]
+          },
+          {
+            "group": "Configuration",
+            "pages": [
+              "configuration/settings",
+              "configuration/custom-themes",
+              "configuration/application-themes",
+              "configuration/keybinds"
+            ]
+          },
+          {
+            "group": "CLI & IPC",
+            "pages": [
+              "cli/overview",
+              "cli/ipc-reference"
+            ]
+          },
+          {
+            "group": "Plugin Development",
+            "pages": [
+              "plugins/overview",
+              "plugins/widget-plugins",
+              "plugins/launcher-plugins",
+              "plugins/desktop-plugins"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "keyFeatures": [
+    "Dynamic wallpaper-based theming with Material Design 3 colors via matugen",
+    "Complete desktop shell replacing waybar, swaylock, swayidle, mako, and fuzzel",
+    "Support for Niri, Hyprland, Sway, MangoWC, labwc, Scroll, and Miracle WM",
+    "Spotlight-style application launcher with file search, emoji, and calculator",
+    "Control Center with network, Bluetooth, audio, display, and night mode controls",
+    "Smart notification center with grouping and keyboard navigation",
+    "Plugin system with bar widgets, launcher extensions, and desktop widgets",
+    "One-command installer for Arch, Fedora, Debian, Ubuntu, openSUSE, and Gentoo",
+    "IPC interface for scripting and keybind integration",
+    "Native Wayland color picker, clipboard history, and screen lock"
+  ],
+  "publicApiSurface": [
+    "dms run",
+    "dms ipc call <target> <function> [params]",
+    "dms brightness list|set",
+    "dms color pick",
+    "dms plugins install|browse|search",
+    "dms clipboard list|clear",
+    "dms screenshot area|output",
+    "dms notify send",
+    "dms dpms on|off",
+    "dms keybinds reload|list",
+    "dms config get|set",
+    "dms doctor",
+    "dms update",
+    "PluginService.loadPlugin(pluginId)",
+    "PluginService.unloadPlugin(pluginId)",
+    "PluginService.savePluginData(pluginId, key, value)",
+    "PluginService.loadPluginData(pluginId, key, defaultValue)",
+    "PluginService.setGlobalVar(pluginId, varName, value)",
+    "PluginService.getGlobalVar(pluginId, varName, defaultValue)",
+    "IPC target: audio (setvolume, increment, decrement, mute, status)",
+    "IPC target: brightness (set, increment, decrement, status, list)",
+    "IPC target: wallpaper (get, set, next, prev, setFor, getFor)",
+    "IPC target: theme (toggle, light, dark, getMode)",
+    "IPC target: spotlight (open, close, toggle, openQuery, toggleQuery)",
+    "IPC target: notifications (open, close, toggle)",
+    "IPC target: control-center (open, close, toggle)",
+    "IPC target: lock (lock, demo, isLocked)",
+    "IPC target: bar (reveal, hide, toggle, status)",
+    "IPC target: mpris (play, pause, playPause, next, previous, stop)",
+    "IPC target: night (toggle, enable, disable, temperature, automation, schedule)",
+    "IPC target: hypr (openOverview, closeOverview, toggleOverview, openBinds)"
+  ]
+}

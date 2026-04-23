@@ -1,0 +1,135 @@
+---
+title: "DankBar: Customizable Status Bar and Widgets"
+description: "DankBar is a per-monitor status bar with workspace switching, system indicators, media controls, plugin slots, and a configurable left-center-right layout."
+---
+
+DankBar is the status bar component of DankMaterialShell. It runs as a per-monitor panel with a three-section layout — left, center, and right — and hosts a set of built-in widgets alongside any plugin widgets you install. You can configure which widgets appear in which section, toggle the bar from keybinds, and extend it with the plugin system.
+
+## Bar positions
+
+DankBar can be positioned at the top, bottom, left, or right edge of each screen. Position is set in **Settings → Appearance → DankBar Layout**. Each monitor gets its own bar instance.
+
+## Built-in widgets
+
+The following widgets ship with DMS and can be placed in any bar section:
+
+<CardGroup cols={2}>
+  <Card title="Workspace switcher" icon="layout-grid">
+    Shows compositor workspaces and allows switching between them. Compositor-aware: works with niri, Hyprland, Sway, Scroll, MangoWC, and labwc.
+  </Card>
+  <Card title="Clock" icon="clock">
+    Displays the current time and date. Clicking opens the calendar popout. Supports 12-hour and 24-hour formats.
+  </Card>
+  <Card title="System tray" icon="monitor">
+    Hosts tray icons from running applications using the standard StatusNotifierItem protocol.
+  </Card>
+  <Card title="Audio" icon="volume-2">
+    Shows current volume level. Clicking opens the audio popout for output and input device control.
+  </Card>
+  <Card title="Network monitor" icon="wifi">
+    Displays network interface status and traffic. Clicking opens network details.
+  </Card>
+  <Card title="Battery" icon="battery-medium">
+    Shows battery level and charge state. Available on devices with a battery.
+  </Card>
+  <Card title="Media controls" icon="play">
+    MPRIS-based media widget showing the current track and playback controls for the active player.
+  </Card>
+  <Card title="CPU and RAM monitors" icon="activity">
+    Real-time CPU usage, RAM usage, CPU temperature, and GPU temperature widgets powered by dgop.
+  </Card>
+  <Card title="Idle inhibitor" icon="shield">
+    Button to toggle idle inhibit — prevents the system from locking or sleeping while active.
+  </Card>
+  <Card title="Notification center button" icon="bell">
+    Opens the notification center panel.
+  </Card>
+  <Card title="Launcher button" icon="search">
+    Opens the Spotlight launcher.
+  </Card>
+  <Card title="VPN indicator" icon="lock">
+    Shows active VPN connection status.
+  </Card>
+</CardGroup>
+
+## Plugin slots
+
+DankBar has three layout sections. Each section is a configurable list of widget IDs:
+
+- **Left section** — typically workspace switcher, launcher button, or running apps
+- **Center section** — typically clock, media, or focused app name
+- **Right section** — typically system indicators, audio, battery, tray
+
+Plugin widgets are placed alongside built-in widgets using the same widget ID system.
+
+## Layout configuration
+
+The bar layout is configured in `~/.config/DankMaterialShell/settings.json` under the `dankBar*` keys, or edited interactively in **Settings → Appearance → DankBar Layout**.
+
+```json
+{
+    "dankBarLeftWidgets": [
+        {"widgetId": "workspaceSwitcher", "enabled": true},
+        {"widgetId": "launcherButton", "enabled": true}
+    ],
+    "dankBarCenterWidgets": [
+        {"widgetId": "clock", "enabled": true},
+        {"widgetId": "media", "enabled": true}
+    ],
+    "dankBarRightWidgets": [
+        {"widgetId": "audio", "enabled": true},
+        {"widgetId": "battery", "enabled": true},
+        {"widgetId": "systemTray", "enabled": true},
+        {"widgetId": "myPlugin", "enabled": true}
+    ]
+}
+```
+
+Each entry specifies the `widgetId` (matching the built-in or plugin ID) and an `enabled` flag. Disabled widgets are hidden but remain in the list so you can re-enable them without reconfiguring the order.
+
+## Multi-monitor support
+
+Each connected monitor receives its own bar instance. Per-monitor instances are independent: the focused monitor's bar is used for IPC operations that target the active screen.
+
+## Controlling the bar via IPC
+
+<Tip>
+  Bind bar visibility commands to a keybind in your compositor config to create an auto-hide or toggle-on-demand workflow.
+</Tip>
+
+```bash
+# Toggle bar visibility
+dms ipc call bar toggle
+
+# Show or hide explicitly
+dms ipc call bar reveal
+dms ipc call bar hide
+
+# Query current visibility
+dms ipc call bar status
+```
+
+**Example Hyprland keybind:**
+
+```conf
+bind = SUPER, B, exec, qs -c dms ipc call bar toggle
+```
+
+**Example niri keybind:**
+
+```kdl
+binds {
+    Mod+B { spawn "qs" "-c" "dms" "ipc" "call" "bar" "toggle"; }
+}
+```
+
+## The Dock
+
+Alongside the bar, DMS includes an application dock (`Dock` module) that shows pinned apps and running application windows. The dock supports:
+
+- Per-app context menus
+- Window management (focus, close, move)
+- Overflow button for additional running apps
+- A launcher button for quick access to the Spotlight launcher
+
+The dock can be positioned independently of the bar and enabled or disabled in **Settings → Appearance**.

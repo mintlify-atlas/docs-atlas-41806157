@@ -1,0 +1,175 @@
+---
+title: "Install DankMaterialShell on Any Linux Distro"
+description: "Install DankMaterialShell with the one-line interactive installer or headless mode on Arch, Fedora, Debian, Ubuntu, openSUSE, and Gentoo Linux."
+---
+
+DankMaterialShell ships `dankinstall`, a distribution-aware installer that handles packages, compositor configuration, and first-launch setup. You can run it interactively with a TUI, or pass flags for fully unattended installation in scripts and dotfile bootstraps.
+
+## Interactive installer
+
+<Steps>
+  <Step title="Run the installer">
+    Paste this command into your terminal. `dankinstall` will launch a TUI that walks you through compositor selection, terminal choice, and optional dependencies:
+
+    ```bash
+    curl -fsSL https://install.danklinux.com | sh
+    ```
+  </Step>
+  <Step title="Select your compositor">
+    Choose from the supported compositors: Niri, Hyprland, Sway, MangoWC, labwc, Scroll, or Miracle WM. The installer configures compositor-specific keybinds and integration automatically.
+  </Step>
+  <Step title="Select your terminal">
+    Choose a terminal emulator: Ghostty, Kitty, or Alacritty. This sets the default terminal launched from the DMS bar and launcher.
+  </Step>
+  <Step title="Review optional dependencies">
+    The installer presents optional components such as `dms-greeter` (a greetd-based login greeter). Select what you want to include.
+  </Step>
+  <Step title="Let the installer finish">
+    `dankinstall` installs all required packages using your distro's package manager, applies compositor configuration, and reports any warnings. Check the log in `/tmp` if you need to review what ran.
+  </Step>
+</Steps>
+
+## Headless (unattended) install
+
+Pass `--compositor`, `--term`, and `--yes` to skip the TUI and run non-interactively. This is useful for dotfile bootstrap scripts or automated provisioning.
+
+<Tip>
+  Headless mode requires cached sudo credentials because the installer needs elevated privileges without a password prompt. Run `sudo -v` immediately before the install command to refresh the cache.
+</Tip>
+
+**Install with Niri and Ghostty:**
+
+```bash
+sudo -v && curl -fsSL https://install.danklinux.com | sh -s -- -c niri -t ghostty -y
+```
+
+**Install with Hyprland, Kitty, and the greeter:**
+
+```bash
+sudo -v && curl -fsSL https://install.danklinux.com | sh -s -- -c hyprland -t kitty --include-deps dms-greeter -y
+```
+
+### dankinstall flags
+
+| Flag | Short | Description |
+|---|---|---|
+| `--compositor <name>` | `-c` | Compositor to install (`niri`, `hyprland`, etc.). Required for headless mode. |
+| `--term <name>` | `-t` | Terminal emulator (`ghostty`, `kitty`, `alacritty`). Required for headless mode. |
+| `--include-deps <name,...>` | | Enable optional dependencies. Example: `dms-greeter`. |
+| `--exclude-deps <name,...>` | | Skip specific dependencies. |
+| `--replace-configs <name,...>` | | Replace specific configuration files. Mutually exclusive with `--replace-configs-all`. |
+| `--replace-configs-all` | | Replace all configuration files. Mutually exclusive with `--replace-configs`. |
+| `--yes` | `-y` | Required for headless mode — confirms installation without interactive prompts. |
+
+Configuration files are not replaced by default. Use `--replace-configs` or `--replace-configs-all` to overwrite existing configs. `dms-greeter` is excluded by default; opt in with `--include-deps dms-greeter`.
+
+## Per-distro packages
+
+<Tabs>
+  <Tab title="Arch">
+    DMS is available in the official Arch `extra` repository and on the AUR for the latest git build:
+
+    ```bash
+    # Stable (official repo)
+    sudo pacman -S dms-shell
+
+    # Latest git build (AUR)
+    makepkg -si  # from a clone of aur.archlinux.org/dms-shell-git.git
+    ```
+
+    The installer uses `pacman` for system packages and `makepkg` directly for AUR packages — no AUR helper required.
+  </Tab>
+  <Tab title="Fedora">
+    DMS packages are available via COPR:
+
+    ```bash
+    sudo dnf copr enable avengemedia/danklinux
+    sudo dnf copr enable avengemedia/dms
+    sudo dnf install dms-shell
+    ```
+
+    The installer configures these repositories automatically when it detects Fedora.
+  </Tab>
+  <Tab title="Debian">
+    <Warning>
+      Debian support requires **Debian 13 (Trixie) or later**. Earlier Debian releases are not supported. Hyprland is not available on Debian — use Niri instead.
+    </Warning>
+
+    On Debian 13+, the installer builds packages from source. This makes the first install slower than on Arch or Fedora but requires no additional repository configuration:
+
+    ```bash
+    curl -fsSL https://install.danklinux.com | sh
+    ```
+
+    When using `dankinstall` in headless mode on Debian, use `-c niri` — Hyprland is not supported on this distribution.
+  </Tab>
+  <Tab title="Ubuntu">
+    Ubuntu requires PPA support. Most packages are built from source, which makes the first install slower:
+
+    ```bash
+    curl -fsSL https://install.danklinux.com | sh
+    ```
+
+    The installer adds the required PPA and builds any packages not available as pre-built binaries.
+  </Tab>
+  <Tab title="openSUSE">
+    Most DMS dependencies are available in standard openSUSE repositories, so the install is faster than on Ubuntu or Debian:
+
+    ```bash
+    curl -fsSL https://install.danklinux.com | sh
+    ```
+
+    The installer uses `zypper` and pulls from the standard repos with minimal source builds required.
+  </Tab>
+  <Tab title="Gentoo">
+    DMS is available via the GURU overlay. The installer configures USE flags automatically:
+
+    ```bash
+    curl -fsSL https://install.danklinux.com | sh
+    ```
+
+    The installer sets up the GURU overlay and runs `emerge` with appropriate USE flags. Results vary depending on your system's existing configuration.
+  </Tab>
+</Tabs>
+
+## Build from source
+
+If you want to build DMS yourself — for development or on an unsupported distribution — you can build both the CLI and the installer from the Go source.
+
+**Requirements:** Go 1.25+
+
+```bash
+cd core
+make              # Build dms CLI
+make dankinstall  # Build installer
+```
+
+This produces binaries in `bin/`. To install them system-wide:
+
+```bash
+sudo make install  # Installs to /usr/local/bin/dms
+```
+
+To build the shell interface directly:
+
+```bash
+quickshell -p quickshell/
+```
+
+### NixOS
+
+DMS ships a Nix flake for declarative installation via home-manager or NixOS modules:
+
+```nix
+{
+  inputs.dms.url = "github:AvengeMedia/DankMaterialShell";
+
+  # Use in home-manager or NixOS configuration
+  imports = [ inputs.dms.homeModules.dank-material-shell ];
+}
+```
+
+## Next steps
+
+- [Configure your compositor](/compositors) — set up keybinds and workspace integration
+- [CLI & IPC reference](/cli/overview) — control DMS from scripts and keybinds
